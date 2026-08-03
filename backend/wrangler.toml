@@ -1,0 +1,7 @@
+name = "npl-auction-backend"
+main = "entry.py"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["python_workers"]
+
+[vars]
+SECRET_KEY = "npl_cricket_auction_super_secret_jwt_key_2026_x99!"

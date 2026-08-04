@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://cgi-creativity-title-rachel.trycloudflare.com/api/:path*"
+      "destination": "https://forwarding-cars-impossible-colours.trycloudflare.com/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "wss://cgi-creativity-title-rachel.trycloudflare.com/ws/:path*"
+      "destination": "wss://forwarding-cars-impossible-colours.trycloudflare.com/ws/:path*"
     },
     {
       "source": "/(.*)",

@@ -34,12 +34,11 @@ app = FastAPI(
 # ─────────────────────────────────────────────────────────────────────────────
 # CORS Configuration
 #
-# IMPORTANT: allow_origins=["*"] + allow_credentials=True is ILLEGAL per the
-# CORS spec — browsers reject every credentialed request with a wildcard origin.
-# We use an explicit list of allowed origins instead.
+# allow_origin_regex covers ALL Vercel preview & production URLs automatically
+# (e.g. npl-cricket-auction-xyz-meghal.vercel.app) so no manual updates needed.
 #
-# Add new Vercel preview URLs via the CORS_ORIGINS env var (comma-separated):
-#   CORS_ORIGINS=https://npl-cricket-auction-git-main.vercel.app
+# To add extra origins at runtime set the CORS_ORIGINS env var (comma-separated):
+#   CORS_ORIGINS=https://your-custom-domain.com
 # ─────────────────────────────────────────────────────────────────────────────
 _env_origins = os.getenv("CORS_ORIGINS", "")
 _extra_origins = [o.strip() for o in _env_origins.split(",") if o.strip()]
@@ -50,7 +49,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
-    # Vercel production deployment
+    # Vercel production deployment (explicit)
     "https://npl-cricket-auction.vercel.app",
     # sslip.io HTTPS backend domain (for API docs)
     "https://92-4-76-201.sslip.io",
@@ -59,6 +58,8 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    # Regex covers ALL *.vercel.app subdomains — production + every preview URL
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],

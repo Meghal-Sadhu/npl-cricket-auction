@@ -68,8 +68,6 @@ export const PlayerRegisterPage: React.FC = () => {
     setError(null);
 
     try {
-      await api.post('/players/register-profile', formData);
-
       if (imageFile) {
         const fileData = new FormData();
         fileData.append('file', imageFile);
@@ -77,6 +75,8 @@ export const PlayerRegisterPage: React.FC = () => {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
+
+      await api.post('/players/register-profile', formData);
 
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 1500);

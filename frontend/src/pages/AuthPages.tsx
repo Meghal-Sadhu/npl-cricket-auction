@@ -19,6 +19,12 @@ export const AuthPages: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isLogin && !email.trim().toLowerCase().endsWith('@nikkisoceig.com')) {
+      setError('Registration is strictly restricted to @nikkisoceig.com email addresses.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -137,7 +143,7 @@ export const AuthPages: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
+                placeholder="name@nikkisoceig.com"
                 className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
               />
             </div>

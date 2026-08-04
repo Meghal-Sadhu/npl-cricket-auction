@@ -38,17 +38,29 @@ def _record_failed_attempt(ip: str) -> None:
     _login_attempts[ip].append(time())
 
 
+from sqlalchemy import func
+
 @router.post("/register", response_model=Token)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user_in.email).first()
+    clean_email = user_in.email.strip().lower()
+
+    # Enforce corporate domain restriction
+    if not clean_email.endswith("@nikkisoceig.com"):
+        raise HTTPException(
+            status_code=400,
+            detail="Registration is restricted to @nikkisoceig.com corporate email addresses."
+        )
+
+    # Case-insensitive duplicacy check
+    existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="An account with this email address already exists.")
 
     user = User(
-        name=user_in.name,
-        email=user_in.email,
+        name=user_in.name.strip(),
+        email=clean_email,
         password_hash=get_password_hash(user_in.password),
-        department=user_in.department,
+        department=user_in.department.strip() if user_in.department else "General",
         role="player"  # Default role is always Player
     )
     db.add(user)

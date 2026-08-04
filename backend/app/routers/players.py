@@ -227,8 +227,11 @@ async def upload_player_photo(
     else:
         profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == current_user.id).first()
 
-    if profile and profile.is_submitted and current_user.role != "admin" and not player_id:
-        raise HTTPException(status_code=400, detail="Profile photo cannot be modified after initial submission.")
+    if not profile:
+        profile = PlayerProfile(user_id=current_user.id)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
 
     if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
         raise HTTPException(status_code=400, detail="Only JPG, PNG, and WEBP images are allowed")

@@ -137,8 +137,8 @@ def startup_db_seed():
         if not admin:
             admin_user = User(
                 name="System Administrator",
-                email="admin@npl.com",
-                password_hash=get_password_hash("admin123"),
+                email="admin@nikkisoceig.com",
+                password_hash=get_password_hash("NPL@Admin2026!"),
                 role="admin",
                 department="Management"
             )

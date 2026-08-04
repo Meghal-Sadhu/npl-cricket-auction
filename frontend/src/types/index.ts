@@ -37,6 +37,7 @@ export interface PlayerProfile {
   created_at: string;
   user_name?: string;
   user_email?: string;
+  user_role?: string;
   department?: string;
   team_name?: string;
 }

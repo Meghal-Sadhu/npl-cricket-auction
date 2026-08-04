@@ -195,11 +195,11 @@ export const Navbar: React.FC = () => {
             
             {/* Left Brand Identity */}
             <Link to="/dashboard" className="flex items-center gap-3 group">
-              <div className="h-10 px-3 rounded-2xl bg-white/95 border border-slate-700/60 shadow-lg shadow-blue-500/10 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
+              <div className="h-11 px-4 rounded-2xl bg-white border-2 border-blue-500/40 shadow-xl shadow-blue-500/20 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
                 <img 
                   src="/nikkiso-logo.png" 
                   alt="Nikkiso Logo" 
-                  className="h-6 w-auto object-contain" 
+                  className="h-8 sm:h-9 w-auto object-contain" 
                 />
               </div>
               <div className="hidden sm:block">

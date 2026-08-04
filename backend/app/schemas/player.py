@@ -73,6 +73,7 @@ class PlayerProfileOut(PlayerProfileBase):
     # Nested user details
     user_name: Optional[str] = None
     user_email: Optional[str] = None
+    user_role: Optional[str] = None
     department: Optional[str] = None
     team_name: Optional[str] = None
 

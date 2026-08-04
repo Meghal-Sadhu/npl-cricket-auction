@@ -438,14 +438,11 @@ export const TeamsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Total Franchise Budget (₹)</label>
-                <input
-                  type="number"
-                  required
-                  value={editBudgetTotal}
-                  onChange={(e) => setEditBudgetTotal(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-brand-500"
-                />
+                <label className="block text-xs font-bold text-slate-300 mb-1">Total Franchise Budget</label>
+                <div className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono flex items-center justify-between">
+                  <span>₹5,00,00,000 (5 Crore)</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Fixed Tournament Rule</span>
+                </div>
               </div>
 
               <div>

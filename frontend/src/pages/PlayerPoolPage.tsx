@@ -348,6 +348,11 @@ export const PlayerPoolPage: React.FC = () => {
                   <p className="text-xs text-slate-400">{p.department || 'General'} • Emp ID: {p.employee_id || 'N/A'}</p>
 
                   <div className="flex items-center gap-2 pt-2">
+                    {p.user_role === 'captain' && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-extrabold border border-amber-500/40 flex items-center gap-1">
+                        <Award className="w-3 h-3" /> CAPTAIN
+                      </span>
+                    )}
                     <span className="px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-400 text-[10px] font-extrabold uppercase border border-brand-500/30">
                       {p.category}
                     </span>
@@ -357,7 +362,7 @@ export const PlayerPoolPage: React.FC = () => {
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-400 text-[10px] font-extrabold border border-slate-800">
-                        Available
+                        {p.user_role === 'captain' ? 'Franchise Captain' : 'Available'}
                       </span>
                     )}
                   </div>
@@ -383,14 +388,21 @@ export const PlayerPoolPage: React.FC = () => {
                   <span className="text-sm font-extrabold text-gold-400">{formatPrice(p.base_price)}</span>
                 </div>
 
-                {/* Admin Direct Allocation Button */}
-                {user?.role === 'admin' && !p.is_sold && (
+                {/* Admin Direct Allocation Button - Hidden for Captains */}
+                {user?.role === 'admin' && !p.is_sold && p.user_role !== 'captain' && (
                   <button
-                    onClick={() => { setAllocatePlayer(p); setSelectedTeamId(''); setPurchasePrice(p.base_price.toString()); }}
+                    onClick={() => { setAllocatePlayer(p); setSelectedTeamId(''); setPurchasePrice('500000'); }}
                     className="w-full py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-brand-400 font-bold text-xs flex items-center justify-center gap-1 border border-slate-800"
                   >
                     <Shield className="w-3.5 h-3.5" /> Direct Allocate to Team
                   </button>
+                )}
+
+                {/* Captain Badge Indicator */}
+                {p.user_role === 'captain' && (
+                  <div className="w-full py-1.5 rounded-xl bg-amber-500/10 text-amber-400 font-bold text-[11px] text-center border border-amber-500/30">
+                    Team Captain (Exempt from Auction)
+                  </div>
                 )}
 
                 {/* Admin Revoke Button for Sold Players */}

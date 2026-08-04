@@ -114,6 +114,9 @@ async def direct_sell_player_to_team(
     if not player:
         raise HTTPException(status_code=404, detail="Player not found.")
 
+    if player.user and player.user.role == "captain":
+        raise HTTPException(status_code=400, detail="Captains cannot be directly sold or allocated to any team.")
+
     team = db.query(Team).filter(Team.id == req.team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found.")
@@ -293,6 +296,8 @@ async def select_player_for_auction(
     player = db.query(PlayerProfile).filter(PlayerProfile.id == player_id).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
+    if player.user and player.user.role == "captain":
+        raise HTTPException(status_code=400, detail="Captains cannot be put on the auction hammer.")
     if player.is_sold:
         raise HTTPException(status_code=400, detail="Player is already sold")
 

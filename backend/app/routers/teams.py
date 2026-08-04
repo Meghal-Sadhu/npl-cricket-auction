@@ -185,6 +185,9 @@ def update_team(
             if c_user and c_user.role != "admin":
                 c_user.role = "captain"
 
+    # Enforce static budget of ₹5 Crore
+    team.budget_total = 50000000.0
+
     db.commit()
     db.refresh(team)
     return enrich_team_out(team, db, current_user=current_user, force_show_details=True)
@@ -199,6 +202,9 @@ async def direct_allocate_player(
     player = db.query(PlayerProfile).filter(PlayerProfile.id == player_id).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
+
+    if player.user and player.user.role == "captain":
+        raise HTTPException(status_code=400, detail="Captains cannot be allocated as regular players.")
 
     team = db.query(Team).filter(Team.id == alloc_in.team_id).first()
     if not team:

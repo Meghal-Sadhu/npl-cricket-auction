@@ -99,6 +99,33 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     return Token(access_token=access_token, user=UserOut.model_validate(user))
 
 
+from pydantic import BaseModel
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+
+@router.post("/reset-password")
+def reset_password(reset_in: ResetPasswordRequest, db: Session = Depends(get_db)):
+    clean_email = reset_in.email.strip().lower()
+    if not clean_email.endswith("@nikkisoceig.com"):
+        raise HTTPException(
+            status_code=400,
+            detail="Password reset is restricted to @nikkisoceig.com corporate email addresses."
+        )
+
+    if len(reset_in.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters long.")
+
+    user = db.query(User).filter(func.lower(User.email) == clean_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No registered account found with this corporate email address.")
+
+    user.password_hash = get_password_hash(reset_in.new_password)
+    db.commit()
+
+    return {"message": f"Password reset successfully for {user.email}. You can now sign in with your new password."}
+
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user

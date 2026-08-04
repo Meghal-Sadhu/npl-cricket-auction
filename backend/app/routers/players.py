@@ -38,9 +38,11 @@ class ProfileUpdate(BaseModel):
 
 def enrich_player_out(player: PlayerProfile) -> PlayerProfileOut:
     out = PlayerProfileOut.model_validate(player)
+    out.base_price = 500000.0  # Fixed ₹5 Lakh
     if player.user:
         out.user_name = player.user.name
         out.user_email = player.user.email
+        out.user_role = player.user.role
         out.department = player.user.department
     if player.team_player and player.team_player.team:
         out.team_name = player.team_player.team.name

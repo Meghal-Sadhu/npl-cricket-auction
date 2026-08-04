@@ -7,11 +7,14 @@ from app.database import get_db
 from app.models.user import User
 from app.models.team import Team, TeamPlayer
 from app.models.player import PlayerProfile
+from app.models.auction import AuctionQueue, AuctionSession
+from app.models.notification import Notification
 from app.models.settings import ApplicationSettings
 from app.schemas.team import TeamCreate, TeamUpdate, TeamOut, TeamPlayerOut, TeamAllocatePlayer
 from app.schemas.player import PlayerProfileOut
 from app.core.security import get_current_user, require_roles
 from app.services.budget_service import calculate_team_budget_metrics
+from app.services.auction_engine import auction_engine
 from app.config import settings
 
 router = APIRouter(prefix="/api/teams", tags=["Teams"])
@@ -178,7 +181,7 @@ def update_team(
     return enrich_team_out(team, db, current_user=current_user, force_show_details=True)
 
 @router.post("/allocate/{player_id}")
-def direct_allocate_player(
+async def direct_allocate_player(
     player_id: int,
     alloc_in: TeamAllocatePlayer,
     db: Session = Depends(get_db),
@@ -210,12 +213,37 @@ def direct_allocate_player(
 
     player.is_sold = True
     team.budget_used += alloc_in.purchase_price
+
+    session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
+    if session:
+        queue_entry = db.query(AuctionQueue).filter(
+            AuctionQueue.session_id == session.id,
+            AuctionQueue.player_id == player_id
+        ).first()
+
+        if queue_entry:
+            queue_entry.status = "sold"
+        else:
+            queue_entry = AuctionQueue(
+                session_id=session.id,
+                player_id=player_id,
+                order_index=0,
+                status="sold"
+            )
+            db.add(queue_entry)
+
+    db.add(Notification(
+        message=f"⚡ DIRECT ALLOCATION! {player.user.name} allocated to {team.name} for ₹{alloc_in.purchase_price:,.0f} by Admin.",
+        type="success"
+    ))
+
     db.commit()
+    await auction_engine.broadcast_state("PLAYER_ALLOCATED")
 
     return {"message": f"Player {player.user.name} directly allocated to {team.name}"}
 
 @router.delete("/{team_id}")
-def delete_team(
+async def delete_team(
     team_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["admin"]))
@@ -224,12 +252,22 @@ def delete_team(
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
 
+    session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
+
     assigned_players = db.query(TeamPlayer).filter(TeamPlayer.team_id == team_id).all()
     for tp in assigned_players:
         if tp.player:
             tp.player.is_sold = False
+            if session:
+                q_entry = db.query(AuctionQueue).filter(
+                    AuctionQueue.session_id == session.id,
+                    AuctionQueue.player_id == tp.player_id
+                ).first()
+                if q_entry:
+                    q_entry.status = "unsold"
 
     db.delete(team)
     db.commit()
+    await auction_engine.broadcast_state("TEAM_DELETED")
 
     return {"message": f"Franchise team '{team.name}' deleted successfully by Admin."}

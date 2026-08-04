@@ -60,6 +60,14 @@ export const useAuctionStore = create<AuctionStore>((set, get) => ({
         } else if (evtType === 'AUCTION_PAUSED') {
           set({ activeToast: { message: '⏸️ Auction Paused by Admin', type: 'warning' } });
           get().fetchNotifications();
+        } else if (evtType === 'PLAYER_ALLOCATED') {
+          set({ activeToast: { message: '⚡ Player Direct Allocation Updated!', type: 'success' } });
+          get().fetchNotifications();
+          get().fetchState();
+        } else if (evtType === 'PLAYER_REVOKED') {
+          set({ activeToast: { message: '🔄 Player Revoked & Returned to Auction Pool by Admin.', type: 'warning' } });
+          get().fetchNotifications();
+          get().fetchState();
         } else if (evtType === 'BID_ERROR') {
           set({ bidError: errText || 'Failed to place bid.' });
         }

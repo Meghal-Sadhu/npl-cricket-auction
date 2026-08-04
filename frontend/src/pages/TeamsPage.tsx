@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../store/authStore';
 import { api, getImageUrl } from '../api/client';
 import { Team, User, PlayerProfile } from '../types';
 import { PlayerDetailModal } from '../components/players/PlayerDetailModal';
-import { Shield, Plus, Users, DollarSign, UserCheck, X, Upload, Image as ImageIcon, Lock, Eye, Edit3, Trash2 } from 'lucide-react';
+import { Shield, Plus, Users, DollarSign, UserCheck, X, Upload, Image as ImageIcon, Lock, Eye, Edit3, Trash2, RotateCcw } from 'lucide-react';
 
 export const TeamsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -61,6 +62,19 @@ export const TeamsPage: React.FC = () => {
       setModalPlayer(res.data);
     } catch (err) {
       console.error('Failed to fetch player profile:', err);
+    }
+  };
+
+  const [revokeConfirmPlayer, setRevokeConfirmPlayer] = useState<{ id: number; name: string } | null>(null);
+
+  const executeRevokePlayer = async () => {
+    if (!revokeConfirmPlayer) return;
+    try {
+      await api.post(`/auction/revoke-player/${revokeConfirmPlayer.id}`);
+      setRevokeConfirmPlayer(null);
+      fetchTeams();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to revoke player');
     }
   };
 
@@ -290,16 +304,26 @@ export const TeamsPage: React.FC = () => {
                         {t.players.map(tp => {
                           const priceText = isPrivileged ? formatPrice(tp.purchase_price) : null;
                           return (
-                            <button 
-                              key={tp.id}
-                              onClick={() => openPlayerModalById(tp.player_id)}
-                              className="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-200 hover:text-brand-400 flex items-center gap-1.5 transition-colors cursor-pointer group"
-                              title="Click to view detailed player profile"
-                            >
-                              <span>{tp.player.user_name}</span>
-                              {priceText && <span className="text-gold-400 font-bold font-mono">({priceText})</span>}
-                              <Eye className="w-3 h-3 text-slate-500 group-hover:text-brand-400 ml-0.5" />
-                            </button>
+                            <div key={tp.id} className="flex items-center gap-1">
+                              <button 
+                                onClick={() => openPlayerModalById(tp.player_id)}
+                                className="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-200 hover:text-brand-400 flex items-center gap-1.5 transition-colors cursor-pointer group"
+                                title="Click to view detailed player profile"
+                              >
+                                <span>{tp.player.user_name}</span>
+                                {priceText && <span className="text-gold-400 font-bold font-mono">({priceText})</span>}
+                                <Eye className="w-3 h-3 text-slate-500 group-hover:text-brand-400 ml-0.5" />
+                              </button>
+                              {user?.role === 'admin' && (
+                                <button
+                                  onClick={() => setRevokeConfirmPlayer({ id: tp.player_id, name: tp.player.user_name })}
+                                  className="p-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-colors"
+                                  title="Revoke player & return to re-auction pool"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -478,6 +502,46 @@ export const TeamsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Screen-Centered Glassmorphic Revoke Confirmation Modal */}
+      {revokeConfirmPlayer && createPortal(
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4 z-[99999]">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 w-full max-w-md shadow-2xl shadow-amber-500/10 space-y-5 text-center relative overflow-hidden">
+            {/* Ambient Glow */}
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Icon Badge */}
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center mx-auto shadow-inner">
+              <RotateCcw className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-white tracking-wide">Revoke Player Assignment?</h3>
+              <p className="text-xs text-slate-300 leading-relaxed px-2">
+                Are you sure you want to revoke <span className="text-amber-400 font-extrabold underline decoration-amber-500/50 underline-offset-4">{revokeConfirmPlayer.name}</span> from their assigned team? This will refund the team budget and return the player to the unsold pool for re-auction.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setRevokeConfirmPlayer(null)}
+                className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={executeRevokePlayer}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-600/30 transition-all cursor-pointer"
+              >
+                Yes, Revoke Player
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Rich Player Detail Pop-up Modal */}

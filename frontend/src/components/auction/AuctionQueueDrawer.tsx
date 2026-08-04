@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { QueueItem } from '../../types';
 import { api } from '../../api/client';
 import { ListFilter, RotateCcw, CheckCircle, Clock, Search, Shield, Gavel } from 'lucide-react';
@@ -40,6 +41,19 @@ export const AuctionQueueDrawer: React.FC<Props> = ({ queue, isAdmin, onRefresh,
       onRefresh();
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Failed to put player on auction hammer');
+    }
+  };
+
+  const [revokeConfirmItem, setRevokeConfirmItem] = useState<{ id: number; name: string } | null>(null);
+
+  const executeRevokePlayer = async () => {
+    if (!revokeConfirmItem) return;
+    try {
+      await api.post(`/auction/revoke-player/${revokeConfirmItem.id}`);
+      setRevokeConfirmItem(null);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to revoke player');
     }
   };
 
@@ -138,11 +152,61 @@ export const AuctionQueueDrawer: React.FC<Props> = ({ queue, isAdmin, onRefresh,
                     <RotateCcw className="w-3.5 h-3.5" /> Re-Auction
                   </button>
                 )}
+
+                {activeTab === 'sold' && isAdmin && (
+                  <button
+                    onClick={() => setRevokeConfirmItem({ id: item.player_id, name: item.player_name })}
+                    className="px-2.5 py-1 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 text-[10px] font-bold flex items-center gap-1 border border-amber-500/30 transition-colors"
+                    title="Revoke team assignment and send back to auction pool"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Revoke & Re-Auction
+                  </button>
+                )}
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Screen-Centered Glassmorphic Revoke Confirmation Modal */}
+      {revokeConfirmItem && createPortal(
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4 z-[99999]">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 w-full max-w-md shadow-2xl shadow-amber-500/10 space-y-5 text-center relative overflow-hidden">
+            {/* Ambient Glow */}
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Icon Badge */}
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center mx-auto shadow-inner">
+              <RotateCcw className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-white tracking-wide">Revoke Player Assignment?</h3>
+              <p className="text-xs text-slate-300 leading-relaxed px-2">
+                Are you sure you want to revoke <span className="text-amber-400 font-extrabold underline decoration-amber-500/50 underline-offset-4">{revokeConfirmItem.name}</span> from their assigned team? This will refund the team budget and return the player to the unsold pool for re-auction.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setRevokeConfirmItem(null)}
+                className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={executeRevokePlayer}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-600/30 transition-all cursor-pointer"
+              >
+                Yes, Revoke Player
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

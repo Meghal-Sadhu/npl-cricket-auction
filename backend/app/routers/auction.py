@@ -331,6 +331,55 @@ async def select_player_for_auction(
     await auction_engine.broadcast_state("PLAYER_SELECTED")
     return {"message": f"Player {player.user.name} put on auction hammer"}
 
+@router.post("/revoke-player/{player_id}")
+async def revoke_player_assignment(
+    player_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    player = db.query(PlayerProfile).filter(PlayerProfile.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    team_name = ""
+    team_player = db.query(TeamPlayer).filter(TeamPlayer.player_id == player_id).first()
+    if team_player:
+        team = db.query(Team).filter(Team.id == team_player.team_id).first()
+        if team:
+            team_name = team.name
+            team.budget_used = max(0.0, team.budget_used - team_player.purchase_price)
+        db.delete(team_player)
+
+    player.is_sold = False
+
+    session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
+    if session:
+        max_order = db.query(AuctionQueue).filter(AuctionQueue.session_id == session.id).count()
+        queue_entry = db.query(AuctionQueue).filter(
+            AuctionQueue.session_id == session.id,
+            AuctionQueue.player_id == player_id
+        ).first()
+
+        if queue_entry:
+            queue_entry.status = "unsold"
+            queue_entry.order_index = max_order + 1
+        else:
+            queue_entry = AuctionQueue(
+                session_id=session.id,
+                player_id=player_id,
+                order_index=max_order + 1,
+                status="unsold"
+            )
+            db.add(queue_entry)
+
+    db.add(Notification(
+        message=f"🔄 REVOKED! {player.user.name} was revoked from {team_name or 'assigned team'} by Admin and returned to unsold pool for re-auction.",
+        type="warning"
+    ))
+    db.commit()
+    await auction_engine.broadcast_state("PLAYER_REVOKED")
+    return {"message": f"Player {player.user.name} successfully revoked and returned to unsold pool for re-auction"}
+
 @router.post("/re-auction-player/{player_id}")
 async def re_auction_player(
     player_id: int,
@@ -340,6 +389,16 @@ async def re_auction_player(
     session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
     if not session:
         raise HTTPException(status_code=400, detail="No active session")
+
+    player = db.query(PlayerProfile).filter(PlayerProfile.id == player_id).first()
+    if player:
+        team_player = db.query(TeamPlayer).filter(TeamPlayer.player_id == player_id).first()
+        if team_player:
+            team = db.query(Team).filter(Team.id == team_player.team_id).first()
+            if team:
+                team.budget_used = max(0.0, team.budget_used - team_player.purchase_price)
+            db.delete(team_player)
+        player.is_sold = False
 
     max_order = db.query(AuctionQueue).filter(AuctionQueue.session_id == session.id).count()
     queue_entry = db.query(AuctionQueue).filter(

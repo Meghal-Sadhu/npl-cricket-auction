@@ -59,6 +59,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     return Token(access_token=access_token, user=UserOut.model_validate(user))
 
 
+from sqlalchemy import func
+
 @router.post("/login", response_model=Token)
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     # Get real client IP (respects X-Forwarded-For from nginx)
@@ -67,7 +69,8 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     # Rate limit check — blocks brute-force attacks
     _check_rate_limit(client_ip)
 
-    user = db.query(User).filter(User.email == credentials.email).first()
+    clean_email = credentials.email.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if not user or not verify_password(credentials.password, user.password_hash):
         _record_failed_attempt(client_ip)
         raise HTTPException(

@@ -31,13 +31,39 @@ app = FastAPI(
     description="Real-time web application for managing cricket player auctions with FastAPI, WebSockets & SQLAlchemy."
 )
 
-# Enable CORS for Frontend SPA
+# ─────────────────────────────────────────────────────────────────────────────
+# CORS Configuration
+#
+# IMPORTANT: allow_origins=["*"] + allow_credentials=True is ILLEGAL per the
+# CORS spec — browsers reject every credentialed request with a wildcard origin.
+# We use an explicit list of allowed origins instead.
+#
+# Add new Vercel preview URLs via the CORS_ORIGINS env var (comma-separated):
+#   CORS_ORIGINS=https://npl-cricket-auction-git-main.vercel.app
+# ─────────────────────────────────────────────────────────────────────────────
+_env_origins = os.getenv("CORS_ORIGINS", "")
+_extra_origins = [o.strip() for o in _env_origins.split(",") if o.strip()]
+
+ALLOWED_ORIGINS = [
+    # Local development
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    # Vercel production deployment
+    "https://npl-cricket-auction.vercel.app",
+    # sslip.io HTTPS backend domain (for API docs)
+    "https://92-4-76-201.sslip.io",
+] + _extra_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
+    expose_headers=["Content-Range", "X-Total-Count"],
+    max_age=600,
 )
 
 # Mount Static Uploads Folder

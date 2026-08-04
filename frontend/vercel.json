@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://forwarding-cars-impossible-colours.trycloudflare.com/api/:path*"
+      "destination": "http://92.4.76.201/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "wss://forwarding-cars-impossible-colours.trycloudflare.com/ws/:path*"
+      "destination": "ws://92.4.76.201/ws/:path*"
     },
     {
       "source": "/(.*)",

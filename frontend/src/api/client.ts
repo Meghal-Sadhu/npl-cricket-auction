@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE = '/api';
-const BACKEND_DOMAIN = import.meta.env.VITE_BACKEND_URL || '';
+const BACKEND_DOMAIN = import.meta.env.VITE_BACKEND_URL || 'http://92.4.76.201';
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -21,12 +21,6 @@ api.interceptors.request.use((config) => {
 
 // Helper function for WebSocket connection
 export const createAuctionSocket = (token?: string): WebSocket => {
-  if (import.meta.env.VITE_WS_URL) {
-    const baseWs = import.meta.env.VITE_WS_URL;
-    const wsUrl = `${baseWs}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-    return new WebSocket(wsUrl);
-  }
-
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
   const wsUrl = `${protocol}//${host}/ws/auction${token ? `?token=${encodeURIComponent(token)}` : ''}`;

@@ -95,55 +95,64 @@ def get_my_captain_team(
 
 @router.post("", response_model=TeamOut)
 def create_team(
-    name: str = Form(...),
-    captain_id: Optional[int] = Form(None),
-    logo: Optional[UploadFile] = File(None),
+    team_in: TeamCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["admin"]))
 ):
-    existing = db.query(Team).filter(Team.name == name).first()
+    existing = db.query(Team).filter(Team.name == team_in.name).first()
     if existing:
         raise HTTPException(status_code=400, detail="Team with this name already exists")
 
-    # Static budget of ₹5 Crore (50,000,000)
-    fixed_budget = 50000000.0
-
-    logo_url = None
-    if logo and logo.filename:
-        if logo.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-            raise HTTPException(status_code=400, detail="Only JPG, PNG, and WEBP images are allowed")
-        
-        contents = logo.file.read()
-        if len(contents) > 5 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="Logo file size exceeds 5 MB maximum limit")
-
-        ext = logo.filename.split(".")[-1] if "." in logo.filename else "jpg"
-        filename = f"team_logo_{uuid.uuid4().hex[:8]}.{ext}"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-
-        with open(file_path, "wb") as f:
-            f.write(contents)
-
-        logo_url = f"/static/uploads/{filename}"
+    fixed_budget = team_in.budget_total or 50000000.0
 
     team = Team(
-        name=name,
+        name=team_in.name,
         budget_total=fixed_budget,
         budget_used=0.0,
-        captain_id=captain_id,
-        logo_path=logo_url
+        captain_id=team_in.captain_id,
+        logo_path=None
     )
     db.add(team)
     db.commit()
     db.refresh(team)
 
-    if captain_id:
-        c_user = db.query(User).filter(User.id == captain_id).first()
+    if team_in.captain_id:
+        c_user = db.query(User).filter(User.id == team_in.captain_id).first()
         if c_user and c_user.role != "admin":
             c_user.role = "captain"
             db.commit()
 
     return enrich_team_out(team, db, current_user=current_user, force_show_details=True)
+
+@router.post("/{team_id}/logo")
+async def upload_team_logo(
+    team_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if file.content_type not in ["image/jpeg", "image/png", "image/webp", "image/svg+xml"]:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, WEBP, and SVG images are allowed")
+
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Logo file size exceeds 5 MB maximum limit")
+
+    ext = file.filename.split(".")[-1] if "." in file.filename else "png"
+    filename = f"team_logo_{team_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+
+    with open(file_path, "wb") as f:
+        f.write(contents)
+
+    team.logo_path = f"/static/uploads/{filename}"
+    db.commit()
+
+    return {"logo_path": team.logo_path}
 
 @router.get("/{team_id}", response_model=TeamOut)
 def get_team_detail(

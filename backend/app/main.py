@@ -25,11 +25,18 @@ from app.routers import (
 # Create Database Tables automatically
 Base.metadata.create_all(bind=engine)
 
+_is_production = settings.ENVIRONMENT == "production"
+
 app = FastAPI(
     title="NPL Cricket Auction Platform API",
     version="1.0.0",
-    description="Real-time web application for managing cricket player auctions with FastAPI, WebSockets & SQLAlchemy."
+    description="Real-time web application for managing cricket player auctions with FastAPI, WebSockets & SQLAlchemy.",
+    # Disable interactive docs in production — they expose full API structure
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
 )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CORS Configuration

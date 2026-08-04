@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://92.4.76.201/api/:path*"
+      "destination": "https://cgi-creativity-title-rachel.trycloudflare.com/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "http://92.4.76.201/ws/:path*"
+      "destination": "wss://cgi-creativity-title-rachel.trycloudflare.com/ws/:path*"
     },
     {
       "source": "/(.*)",

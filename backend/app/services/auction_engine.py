@@ -40,7 +40,24 @@ class AuctionEngine:
                 ).delete(synchronize_session=False)
                 db.commit()
 
-        # 3. Find all unsold non-exempt players not yet queued in this session
+        # 3. Ensure all users with role 'player' have a PlayerProfile record
+        existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all())
+        players_without_profile = db.query(User).filter(
+            User.role == "player",
+            ~User.id.in_(existing_profile_user_ids) if existing_profile_user_ids else True
+        ).all()
+        for p_user in players_without_profile:
+            db.add(PlayerProfile(
+                user_id=p_user.id,
+                category="Batsman",
+                base_price=500000.0,
+                is_sold=False,
+                is_submitted=False
+            ))
+        if players_without_profile:
+            db.commit()
+
+        # 4. Find all unsold non-exempt players not yet queued in this session
         existing_queued_player_ids = set(
             r[0] for r in db.query(AuctionQueue.player_id).filter(AuctionQueue.session_id == session_id).all()
         )

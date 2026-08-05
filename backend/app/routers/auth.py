@@ -41,6 +41,8 @@ def _record_failed_attempt(ip: str) -> None:
 
 from sqlalchemy import func
 
+from app.models.player import PlayerProfile
+
 @router.post("/register", response_model=Token)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     clean_email = user_in.email.strip().lower()
@@ -67,6 +69,17 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Auto-create PlayerProfile so player is immediately present in Player Pool & Auction Queue
+    profile = PlayerProfile(
+        user_id=user.id,
+        category="Batsman",
+        base_price=500000.0,
+        is_sold=False,
+        is_submitted=False
+    )
+    db.add(profile)
+    db.commit()
 
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
     return Token(access_token=access_token, user=UserOut.model_validate(user))

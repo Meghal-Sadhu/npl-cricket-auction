@@ -6,9 +6,10 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-def send_otp_email(to_email: str, otp_code: str) -> bool:
+def send_otp_email(to_email: str, otp_code: str) -> tuple[bool, str]:
     """
     Sends a 6-digit OTP verification email to the user's corporate email address via Outlook/Office365 SMTP.
+    Returns (success, message).
     """
     smtp_server = settings.SMTP_SERVER or "smtp.office365.com"
     smtp_port = settings.SMTP_PORT or 587
@@ -59,9 +60,9 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
     """
 
     if not smtp_user or not smtp_password:
-        logger.error(f"[OUTLOOK SMTP ERROR] SMTP_USER ({smtp_user}) or SMTP_PASSWORD not set in server environment. Unable to authenticate with Outlook SMTP server.")
-        print(f"[OUTLOOK SMTP MISSING CREDS] Sender: {smtp_user} | Recipient: {to_email} | OTP: {otp_code}")
-        return False
+        err = f"SMTP credentials not configured for {smtp_user} in server environment."
+        logger.error(f"[OUTLOOK SMTP ERROR] {err}")
+        return False, err
 
     try:
         msg = MIMEMultipart("alternative")
@@ -80,8 +81,19 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
             server.sendmail(from_email, [to_email], msg.as_string())
 
         logger.info(f"OTP email successfully sent via Outlook SMTP ({smtp_user}) to {to_email}")
-        return True
+        return True, "Email sent successfully"
+    except smtplib.SMTPAuthenticationError as e:
+        err_str = str(e)
+        if "5.7.139" in err_str:
+            err = (
+                "Microsoft 365 SMTP Auth error 5.7.139: 'Authenticated SMTP' is disabled for "
+                f"{smtp_user} in M365 Admin Center, or an App Password is required if 2FA is active."
+            )
+        else:
+            err = f"Outlook SMTP Authentication Failed ({smtp_user}): {err_str}"
+        logger.error(f"[OUTLOOK SMTP AUTH ERROR] {err}")
+        return False, err
     except Exception as e:
-        logger.error(f"Failed to send OTP email via Outlook SMTP: {e}")
-        print(f"[OUTLOOK SMTP ERROR] Failed to send email from {smtp_user} to {to_email}: {e}")
-        return False
+        err = f"Outlook SMTP Send Error: {e}"
+        logger.error(err)
+        return False, err

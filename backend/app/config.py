@@ -22,12 +22,12 @@ class Settings(BaseSettings):
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     LOGIN_RATE_LIMIT_PER_MINUTE: int = 10  # Max login attempts per IP per minute
 
-    # ── Email / SMTP Configuration (Outlook / Office 365) ─────────────────────
-    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.office365.com")
+    # ── Email / SMTP Configuration (Gmail SMTP) ────────────────────────────────
+    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_USER: str = os.getenv("SMTP_USER", "sadhumeghal@gmail.com")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
+    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "sadhumeghal@gmail.com")
 
     class Config:
         env_file = ".env"

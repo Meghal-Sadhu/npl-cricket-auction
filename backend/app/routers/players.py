@@ -139,7 +139,7 @@ def admin_create_player(
     # Handle Shopfloor Employee vs Normal Account Creation
     if p_in.is_shopfloor:
         emp_code = p_in.employee_id or uuid.uuid4().hex[:6]
-        user_email = f"shopfloor_{emp_code}@npl.local"
+        user_email = f"shopfloor_{emp_code}@nikkisoceig.com"
         user_password = uuid.uuid4().hex[:10]
     else:
         if not p_in.email:

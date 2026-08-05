@@ -21,33 +21,33 @@ class AuctionEngine:
         self.is_running: bool = False
 
     def sync_auction_queue(self, db: Session, session_id: int):
-        # 1. Identify all captain User IDs across Team records and User roles
-        captain_user_ids = set()
+        # 1. Identify all exempt User IDs (Captains and Admins)
+        exempt_user_ids = set()
         for t in db.query(Team).all():
             if t.captain_id:
-                captain_user_ids.add(t.captain_id)
-        for u in db.query(User).filter(User.role == "captain").all():
-            captain_user_ids.add(u.id)
+                exempt_user_ids.add(t.captain_id)
+        for u in db.query(User).filter(User.role.in_(["captain", "admin"])).all():
+            exempt_user_ids.add(u.id)
 
-        # 2. Remove any captains from the queue if present
-        if captain_user_ids:
-            captain_profiles = db.query(PlayerProfile).filter(PlayerProfile.user_id.in_(captain_user_ids)).all()
-            captain_profile_ids = [p.id for p in captain_profiles]
-            if captain_profile_ids:
+        # 2. Remove any exempt users from the queue if present
+        if exempt_user_ids:
+            exempt_profiles = db.query(PlayerProfile).filter(PlayerProfile.user_id.in_(exempt_user_ids)).all()
+            exempt_profile_ids = [p.id for p in exempt_profiles]
+            if exempt_profile_ids:
                 db.query(AuctionQueue).filter(
                     AuctionQueue.session_id == session_id,
-                    AuctionQueue.player_id.in_(captain_profile_ids)
+                    AuctionQueue.player_id.in_(exempt_profile_ids)
                 ).delete(synchronize_session=False)
                 db.commit()
 
-        # 3. Find all unsold non-captain players not yet queued in this session
+        # 3. Find all unsold non-exempt players not yet queued in this session
         existing_queued_player_ids = set(
             r[0] for r in db.query(AuctionQueue.player_id).filter(AuctionQueue.session_id == session_id).all()
         )
 
         query = db.query(PlayerProfile).join(User).filter(PlayerProfile.is_sold == False)
-        if captain_user_ids:
-            query = query.filter(~User.id.in_(captain_user_ids))
+        if exempt_user_ids:
+            query = query.filter(~User.id.in_(exempt_user_ids))
 
         all_eligible_players = query.all()
         unqueued_players = [p for p in all_eligible_players if p.id not in existing_queued_player_ids]

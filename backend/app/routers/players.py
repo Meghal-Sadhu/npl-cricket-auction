@@ -56,6 +56,23 @@ def list_players(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    # Ensure all users with role 'player' have a PlayerProfile record so they appear in pool
+    existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all())
+    users_without_profile = db.query(User).filter(
+        User.role == "player",
+        ~User.id.in_(existing_profile_user_ids) if existing_profile_user_ids else True
+    ).all()
+    for u in users_without_profile:
+        db.add(PlayerProfile(
+            user_id=u.id,
+            category="Batsman",
+            base_price=500000.0,
+            is_sold=False,
+            is_submitted=False
+        ))
+    if users_without_profile:
+        db.commit()
+
     query = db.query(PlayerProfile).join(User)
     if category:
         query = query.filter(PlayerProfile.category == category)
@@ -69,7 +86,7 @@ def list_players(
             (PlayerProfile.employee_id.ilike(f"%{search}%")) |
             (PlayerProfile.category.ilike(f"%{search}%"))
         )
-    players = query.all()
+    players = query.order_by(PlayerProfile.id.desc()).all()
     return [enrich_player_out(p) for p in players]
 
 @router.get("/me", response_model=PlayerProfileOut)

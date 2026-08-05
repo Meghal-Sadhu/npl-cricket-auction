@@ -25,7 +25,7 @@ def list_users(
         query = query.filter(
             (User.name.ilike(f"%{search}%")) | (User.email.ilike(f"%{search}%"))
         )
-    return query.all()
+    return query.order_by(User.id.desc()).all()
 
 @router.put("/{user_id}/role", response_model=UserOut)
 def update_user_role(

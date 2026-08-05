@@ -18,7 +18,7 @@ export const UserManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [roleFilter]);
+  }, [roleFilter, search]);
 
   const fetchUsers = async () => {
     try {

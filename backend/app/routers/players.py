@@ -141,12 +141,22 @@ def admin_create_player(
         if not p_in.password:
             raise HTTPException(status_code=400, detail="Password is required for regular users.")
         
-        user_email = p_in.email
-        user_password = p_in.password
+        clean_email = p_in.email.strip().lower()
+        if not clean_email.endswith("@nikkisoceig.com"):
+            raise HTTPException(
+                status_code=400,
+                detail="Player corporate email address must end with @nikkisoceig.com"
+            )
 
-        existing_user = db.query(User).filter(User.email == user_email).first()
+        existing_user = db.query(User).filter(func.lower(User.email) == clean_email).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="User with this email already exists")
+            raise HTTPException(
+                status_code=400,
+                detail="An account with this email address already exists in the database."
+            )
+
+        user_email = clean_email
+        user_password = p_in.password
 
     # Fixed base price of ₹5 Lakh
     default_base = 500000.0

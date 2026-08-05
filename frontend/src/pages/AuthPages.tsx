@@ -27,7 +27,6 @@ export const AuthPages: React.FC = () => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
-    setDemoOtpNotice(null);
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail.endsWith('@nikkisoceig.com')) {
@@ -38,11 +37,8 @@ export const AuthPages: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.post('/auth/send-reset-otp', { email: cleanEmail });
-      setSuccessMsg(res.data.message || `OTP sent to ${cleanEmail}`);
-      if (res.data.otp) {
-        setDemoOtpNotice(`Verification Code: ${res.data.otp}`);
-        setOtpCode(res.data.otp); // Pre-fill for convenience
-      }
+      setSuccessMsg(res.data.message || `Verification OTP code sent to ${cleanEmail}. Please enter the 6-digit code.`);
+      setOtpCode(''); // Require manual OTP entry
       setForgotStep('otp');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to send OTP code.');
@@ -177,7 +173,7 @@ export const AuthPages: React.FC = () => {
           {/* Mode Switcher */}
           <div className="flex bg-slate-900/80 rounded-xl p-1 mb-6 border border-slate-800">
             <button
-              onClick={() => { setAuthMode('login'); setError(null); setSuccessMsg(null); setDemoOtpNotice(null); }}
+              onClick={() => { setAuthMode('login'); setError(null); setSuccessMsg(null); }}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                 authMode === 'login' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
@@ -185,7 +181,7 @@ export const AuthPages: React.FC = () => {
               Sign In
             </button>
             <button
-              onClick={() => { setAuthMode('register'); setError(null); setSuccessMsg(null); setDemoOtpNotice(null); }}
+              onClick={() => { setAuthMode('register'); setError(null); setSuccessMsg(null); }}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                 authMode === 'register' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
@@ -198,13 +194,6 @@ export const AuthPages: React.FC = () => {
           {successMsg && (
             <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2">
               <CheckCircle className="w-4 h-4 flex-shrink-0" /> {successMsg}
-            </div>
-          )}
-
-          {demoOtpNotice && (
-            <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-between">
-              <span>{demoOtpNotice}</span>
-              <span className="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded text-amber-400">Auto-filled</span>
             </div>
           )}
 

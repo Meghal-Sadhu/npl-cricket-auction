@@ -97,11 +97,17 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
 
     clean_email = credentials.email.strip().lower()
     user = db.query(User).filter(func.lower(User.email) == clean_email).first()
-    if not user or not verify_password(credentials.password, user.password_hash):
+    if not user:
+        _record_failed_attempt(client_ip)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No registered account found with this email address. Please check your email or register."
+        )
+    if not verify_password(credentials.password, user.password_hash):
         _record_failed_attempt(client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
+            detail="Incorrect password. Please check your credentials and try again."
         )
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is deactivated")
@@ -149,9 +155,11 @@ def send_reset_otp(req: SendOtpRequest, db: Session = Depends(get_db)):
         "verified": False
     }
 
+    # Log to server output securely
+    print(f"[OTP LOG] Verification OTP for {clean_email}: {otp_code}")
+
     return {
-        "message": f"Verification OTP code sent to {clean_email}.",
-        "otp": otp_code
+        "message": f"Verification OTP code sent to {clean_email}."
     }
 
 @router.post("/verify-reset-otp")

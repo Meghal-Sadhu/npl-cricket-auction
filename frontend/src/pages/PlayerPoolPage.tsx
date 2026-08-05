@@ -120,6 +120,13 @@ export const PlayerPoolPage: React.FC = () => {
 
   const handleAdminCreatePlayer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isShopfloor) {
+      const cleanEmail = newEmail.trim().toLowerCase();
+      if (!cleanEmail.endsWith('@nikkisoceig.com')) {
+        alert('Player corporate email address must end with @nikkisoceig.com');
+        return;
+      }
+    }
     try {
       const res = await api.post('/players/admin-create', {
         name: newName,
@@ -302,26 +309,31 @@ export const PlayerPoolPage: React.FC = () => {
             <div key={p.id} className="glass-card rounded-3xl p-5 border border-slate-800 space-y-4 relative group hover:border-slate-700 transition-all flex flex-col justify-between">
               
               <div>
-                {/* Photo Header & Wishlist Button */}
-                <div className="flex items-start justify-between gap-3">
-                  <div 
-                    onClick={() => setModalPlayer(p)}
-                    className="w-16 h-20 rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center cursor-pointer group-hover:scale-105 transition-transform"
-                  >
-                    {p.image_path ? (
-                      <img src={getImageUrl(p.image_path)} alt={p.user_name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl font-black text-brand-400">{p.user_name?.charAt(0)}</span>
-                    )}
-                  </div>
+                {/* Large High-Clarity Photo Frame */}
+                <div 
+                  onClick={() => setModalPlayer(p)}
+                  className="relative w-full h-64 sm:h-72 rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden cursor-pointer group-hover:scale-[1.01] transition-transform duration-300 shadow-xl"
+                >
+                  {p.image_path ? (
+                    <img 
+                      src={getImageUrl(p.image_path)} 
+                      alt={p.user_name} 
+                      className="w-full h-full object-cover object-top" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-slate-900 via-slate-950 to-slate-900">
+                      <span className="text-4xl font-black text-brand-400">{p.user_name?.charAt(0)}</span>
+                    </div>
+                  )}
 
+                  {/* Captain Wishlist Overlay Button */}
                   {user?.role === 'captain' && !p.is_sold && (
                     <button
-                      onClick={() => toggleWishlist(p.id)}
-                      className={`p-2 rounded-xl border transition-colors ${
+                      onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }}
+                      className={`absolute top-3 right-3 p-2.5 rounded-xl backdrop-blur-md border shadow-xl transition-all ${
                         wishlistIds.includes(p.id)
-                          ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
-                          : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-rose-400'
+                          ? 'bg-rose-500/80 border-rose-400 text-white shadow-rose-500/30'
+                          : 'bg-slate-950/70 border-slate-700/80 text-slate-300 hover:text-rose-400'
                       }`}
                       title="Add to Captain Wishlist"
                     >
@@ -544,7 +556,7 @@ export const PlayerPoolPage: React.FC = () => {
                         required
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
-                        placeholder="player@npl.com"
+                        placeholder="player@nikkisoceig.com"
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
                       />
                     </div>

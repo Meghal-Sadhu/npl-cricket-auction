@@ -33,12 +33,12 @@ export const PlayerDetailModal: React.FC<Props> = ({ player, onClose }) => {
         </div>
 
         {/* Top Header info */}
-        <div className="flex items-center gap-5 relative z-10">
-          <div className="w-20 h-24 rounded-2xl bg-slate-900 border-2 border-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center shadow-xl">
+        <div className="flex items-start gap-5 relative z-10">
+          <div className="w-32 h-40 sm:w-36 sm:h-44 rounded-2xl bg-slate-900 border-2 border-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center shadow-2xl">
             {player.image_path ? (
-              <img src={getImageUrl(player.image_path)} alt={player.user_name} className="w-full h-full object-cover" />
+              <img src={getImageUrl(player.image_path)} alt={player.user_name} className="w-full h-full object-cover object-top" />
             ) : (
-              <span className="text-3xl font-black text-brand-400">{player.user_name?.charAt(0)}</span>
+              <span className="text-4xl font-black text-brand-400">{player.user_name?.charAt(0)}</span>
             )}
           </div>
 

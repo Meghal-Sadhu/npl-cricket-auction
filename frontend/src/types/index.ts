@@ -104,7 +104,7 @@ export interface CurrentPlayer {
 
 export interface AuctionState {
   session_id: number;
-  status: 'not_started' | 'live' | 'paused' | 'held' | 'completed';
+  status: 'not_started' | 'live' | 'paused' | 'held' | 'completed' | 'intermission';
   timer_seconds: number;
   current_player?: CurrentPlayer;
   highest_bid?: number;

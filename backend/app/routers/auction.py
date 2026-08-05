@@ -341,6 +341,9 @@ async def revoke_player_assignment(
 
     session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
     if session:
+        # Delete ALL previous bid history for this player so price resets to base price
+        db.query(Bid).filter(Bid.player_id == player_id).delete()
+
         max_order = db.query(AuctionQueue).filter(AuctionQueue.session_id == session.id).count()
         queue_entry = db.query(AuctionQueue).filter(
             AuctionQueue.session_id == session.id,
@@ -348,24 +351,24 @@ async def revoke_player_assignment(
         ).first()
 
         if queue_entry:
-            queue_entry.status = "unsold"
+            queue_entry.status = "queued"
             queue_entry.order_index = max_order + 1
         else:
             queue_entry = AuctionQueue(
                 session_id=session.id,
                 player_id=player_id,
                 order_index=max_order + 1,
-                status="unsold"
+                status="queued"
             )
             db.add(queue_entry)
 
     db.add(Notification(
-        message=f"🔄 REVOKED! {player.user.name} was revoked from {team_name or 'assigned team'} by Admin and returned to unsold pool for re-auction.",
+        message=f"🔄 REVOKED! {player.user.name} was revoked from {team_name or 'assigned team'} by Admin and re-queued for auction starting at base price ₹{player.base_price:,.0f}.",
         type="warning"
     ))
     db.commit()
     await auction_engine.broadcast_state("PLAYER_REVOKED")
-    return {"message": f"Player {player.user.name} successfully revoked and returned to unsold pool for re-auction"}
+    return {"message": f"Player {player.user.name} successfully revoked, bid history cleared, and returned to active queue"}
 
 @router.post("/re-auction-player/{player_id}")
 async def re_auction_player(
@@ -387,6 +390,9 @@ async def re_auction_player(
             db.delete(team_player)
         player.is_sold = False
 
+    # Delete ALL previous bid history for this player
+    db.query(Bid).filter(Bid.player_id == player_id).delete()
+
     max_order = db.query(AuctionQueue).filter(AuctionQueue.session_id == session.id).count()
     queue_entry = db.query(AuctionQueue).filter(
         AuctionQueue.session_id == session.id,
@@ -407,7 +413,7 @@ async def re_auction_player(
 
     db.commit()
     await auction_engine.broadcast_state("QUEUE_UPDATED")
-    return {"message": "Player re-queued for auction"}
+    return {"message": "Player re-queued for auction with bid history reset"}
 
 # Requirement 5: Company Logo Upload & Fetch
 @router.post("/company-logo")

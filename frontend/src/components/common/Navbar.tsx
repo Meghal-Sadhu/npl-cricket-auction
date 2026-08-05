@@ -133,13 +133,13 @@ export const Navbar: React.FC = () => {
         achievements: editAchievements
       });
 
-      if (editPhotoFile && (!isSubmitted || user?.role === 'admin')) {
+      if (editPhotoFile) {
         const formData = new FormData();
         formData.append('file', editPhotoFile);
         const uploadRes = await api.post('/players/upload-photo', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        if (uploadRes.data?.image_path) setUserPhotoUrl(uploadRes.data.image_path);
+        if (uploadRes.data?.image_path) setUserPhotoUrl(`${uploadRes.data.image_path}?t=${Date.now()}`);
       }
 
       await fetchCurrentUser();

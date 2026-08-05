@@ -135,10 +135,15 @@ export const AuctionRoomPage: React.FC = () => {
     }
   };
 
-  // User's Team & Highest Bidder Status
+  // User's Team & Highest Bidder Status - Strictly scoped to CURRENT active player on hammer
   const userTeam = auctionState?.teams.find(t => t.captain_id === user?.id);
   const isUserHighestBidder = Boolean(
-    userTeam && auctionState?.highest_bidder_team?.id === userTeam.id
+    userTeam && 
+    currentPlayer?.id && 
+    auctionState?.highest_bidder_team?.id === userTeam.id &&
+    auctionState?.bids &&
+    auctionState.bids.length > 0 &&
+    auctionState.bids[0].team_id === userTeam.id
   );
 
   // Timer Calculation
@@ -223,6 +228,20 @@ export const AuctionRoomPage: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Requirement 3: 15-Second Post-Sale Intermission Break Countdown Banner */}
+      {(auctionState?.status === 'intermission' || intermissionTime !== null) && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-gold-500/20 via-amber-500/20 to-gold-500/20 border-2 border-gold-400/50 text-gold-300 text-sm font-black flex items-center justify-between shadow-2xl animate-pulse">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-gold-400 animate-spin" />
+            <span>⏸️ 15-SECOND POST-SALE INTERMISSION BREAK (AUTO-RESUMING NEXT PLAYER)</span>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-950/80 px-4 py-1.5 rounded-xl border border-gold-400/30">
+            <span className="text-xs text-slate-400 font-bold uppercase">Next Player In:</span>
+            <span className="text-xl font-extrabold font-mono text-gold-400">{intermissionTime ?? 15}s</span>
+          </div>
+        </div>
+      )}
 
       {/* Error Alert Toast */}
       {bidErrorLocal && (

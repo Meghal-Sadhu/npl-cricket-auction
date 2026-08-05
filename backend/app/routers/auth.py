@@ -135,6 +135,8 @@ class ResetPasswordWithOtpRequest(BaseModel):
     otp: str
     new_password: str
 
+from app.services.email_service import send_otp_email
+
 @router.post("/send-reset-otp")
 def send_reset_otp(req: SendOtpRequest, db: Session = Depends(get_db)):
     clean_email = req.email.strip().lower()
@@ -155,8 +157,8 @@ def send_reset_otp(req: SendOtpRequest, db: Session = Depends(get_db)):
         "verified": False
     }
 
-    # Log to server output securely
-    print(f"[OTP LOG] Verification OTP for {clean_email}: {otp_code}")
+    # Dispatch email via Outlook SMTP service
+    send_otp_email(clean_email, otp_code)
 
     return {
         "message": f"Verification OTP code sent to {clean_email}."

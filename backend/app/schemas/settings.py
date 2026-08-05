@@ -8,6 +8,8 @@ class SettingsOut(BaseModel):
     team_budget: float = 50000000.0 # ₹5 Crore
     base_price: float = 500000.0 # ₹5 Lakh
     timer_seconds: int = 30
-    min_players: int = 11
-    max_players: int = 11
+    intermission_seconds: int = 15
+    min_players: int = 15
+    max_players: int = 18
+    min_squad_size: int = 15
     timer_reset_on_bid: bool = True

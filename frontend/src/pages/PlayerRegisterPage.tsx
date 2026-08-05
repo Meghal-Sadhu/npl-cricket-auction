@@ -145,13 +145,18 @@ export const PlayerRegisterPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Age</label>
+              <label className="block text-xs font-bold text-slate-300 mb-1">Age (Max 2 Digits)</label>
               <input
-                type="number"
+                type="text"
+                maxLength={2}
                 required
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 25 })}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                value={formData.age === 0 ? '' : String(formData.age || '')}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                  setFormData({ ...formData, age: cleaned === '' ? 0 : parseInt(cleaned, 10) });
+                }}
+                placeholder="25"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 font-mono"
               />
             </div>
 

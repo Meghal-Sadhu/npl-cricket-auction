@@ -16,12 +16,23 @@ def get_allowed_increments(current_price: float) -> List[float]:
     else:
         return [1500000.0, 2000000.0]
 
-def validate_bid(team: Team, bid_amount: float, current_price: float, db: Session) -> Tuple[bool, str]:
+from app.models.auction import AuctionSession, Bid
+
+def validate_bid(team: Team, bid_amount: float, current_price: float, session: AuctionSession, db: Session) -> Tuple[bool, str]:
     metrics = calculate_team_budget_metrics(team, db)
     
     if metrics["is_squad_full"]:
-        return False, f"Team '{team.name}' has already completed its 11-player squad limit."
+        return False, f"Team '{team.name}' has already completed its squad limit of {metrics.get('squad_target', 15)} players."
         
+    # Prevent consecutive bids from the same team
+    highest_bid = db.query(Bid).filter(
+        Bid.session_id == session.id,
+        Bid.player_id == session.current_player_id
+    ).order_by(Bid.amount.desc()).first()
+
+    if highest_bid and highest_bid.team_id == team.id:
+        return False, f"Your team '{team.name}' is already the highest bidder! Wait for another team to place a bid."
+
     if bid_amount <= current_price:
         return False, f"Bid amount (₹{bid_amount:,.0f}) must be higher than current price (₹{current_price:,.0f})."
         
@@ -36,8 +47,7 @@ def validate_bid(team: Team, bid_amount: float, current_price: float, db: Sessio
             
     if bid_amount > (metrics["budget_used"] + metrics["spendable_budget"]):
         # Check if bid amount exceeds team spendable budget
-        required_additional_funds = bid_amount - metrics["budget_used"]
-        if required_additional_funds > metrics["spendable_budget"]:
+        if bid_amount > metrics["spendable_budget"]:
             return False, f"Bid of ₹{bid_amount:,.0f} exceeds maximum spendable budget (₹{metrics['spendable_budget']:,.0f}) after reserving base price for remaining slots."
 
     return True, "Bid valid"

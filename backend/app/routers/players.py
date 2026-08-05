@@ -96,26 +96,15 @@ def update_my_user_and_player_profile(
         profile = PlayerProfile(user_id=current_user.id)
         db.add(profile)
 
-    # Check if profile was already submitted by non-admin
-    is_already_submitted = profile.is_submitted and current_user.role != "admin"
+    if profile_in.name:
+        current_user.name = profile_in.name
+    if profile_in.department:
+        current_user.department = profile_in.department
 
-    if not is_already_submitted:
-        if profile_in.name:
-            current_user.name = profile_in.name
-        if profile_in.department:
-            current_user.department = profile_in.department
-
-        for field, value in profile_in.model_dump(exclude_unset=True).items():
-            if field not in ["name", "department"] and hasattr(profile, field) and value is not None:
-                setattr(profile, field, value)
-    else:
-        # Once submitted, ONLY Jersey Specifications are allowed to be modified by non-admin!
-        if profile_in.jersey_name is not None:
-            profile.jersey_name = profile_in.jersey_name
-        if profile_in.jersey_number is not None:
-            profile.jersey_number = str(profile_in.jersey_number)[:2]
-        if profile_in.tshirt_size is not None:
-            profile.tshirt_size = profile_in.tshirt_size
+    # Everyone is allowed to update Category, Batting style, Bowling style, Experience level, Age, and Jersey details!
+    for field, value in profile_in.model_dump(exclude_unset=True).items():
+        if field not in ["name", "department"] and hasattr(profile, field) and value is not None:
+            setattr(profile, field, value)
 
     # Mark profile as submitted
     profile.is_submitted = True
@@ -212,14 +201,9 @@ def register_or_update_profile(
         profile.is_submitted = True
         db.add(profile)
     else:
-        is_already_submitted = profile.is_submitted and current_user.role != "admin"
-        if not is_already_submitted:
-            for field, value in profile_in.model_dump().items():
+        for field, value in profile_in.model_dump().items():
+            if value is not None:
                 setattr(profile, field, value)
-        else:
-            profile.jersey_name = profile_in.jersey_name
-            profile.jersey_number = str(profile_in.jersey_number)[:2] if profile_in.jersey_number else None
-            profile.tshirt_size = profile_in.tshirt_size
 
         profile.is_submitted = True
 

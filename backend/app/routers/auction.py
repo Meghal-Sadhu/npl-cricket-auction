@@ -454,8 +454,10 @@ def get_settings(db: Session = Depends(get_db)):
         team_budget=50000000.0, # Enforce static 5 Crore
         base_price=500000.0,   # Enforce static 5 Lakh
         timer_seconds=int(setting_map.get("timer_seconds", 30)),
-        min_players=int(setting_map.get("min_players", 11)),
-        max_players=int(setting_map.get("max_players", 11)),
+        intermission_seconds=int(setting_map.get("intermission_seconds", 15)),
+        min_players=int(setting_map.get("min_squad_size", 15)),
+        max_players=int(setting_map.get("max_squad_size", 18)),
+        min_squad_size=int(setting_map.get("min_squad_size", 15)),
         timer_reset_on_bid=setting_map.get("timer_reset_on_bid", "true").lower() == "true"
     )
 

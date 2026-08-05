@@ -7,10 +7,20 @@ SQUAD_TARGET = 11
 
 def get_base_price(db: Session) -> float:
     setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "base_price").first()
-    return float(setting.value) if setting else DEFAULT_BASE_PRICE
+    return float(setting.value) if setting and setting.value else DEFAULT_BASE_PRICE
+
+def get_target_squad_size(db: Session) -> int:
+    setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "min_squad_size").first()
+    if setting and setting.value:
+        try:
+            return int(float(setting.value))
+        except ValueError:
+            pass
+    return 15
 
 def calculate_team_budget_metrics(team: Team, db: Session) -> dict:
     base_price = get_base_price(db)
+    squad_target = get_target_squad_size(db)
     
     # Purchased non-captain players in team_players table
     team_players = db.query(TeamPlayer).filter(TeamPlayer.team_id == team.id).all()
@@ -22,21 +32,25 @@ def calculate_team_budget_metrics(team: Team, db: Session) -> dict:
     # Total assigned players count
     total_assigned = len(team_players) + captain_assigned
     
-    # Slots remaining to reach target squad of 11
-    remaining_slots = max(0, SQUAD_TARGET - total_assigned)
+    # Slots remaining to reach target squad size
+    remaining_slots = max(0, squad_target - total_assigned)
     
-    # Reserved amount for remaining slots
-    reserved_budget = float(remaining_slots * base_price)
+    # Reserve base price for (remaining_slots - 1) players so team can afford remaining squad
+    reserved_slots = max(0, remaining_slots - 1)
+    reserved_budget = float(reserved_slots * base_price)
     
-    # Maximum spendable budget
-    spendable_budget = float(team.budget_total - actual_budget_used - reserved_budget)
+    # Maximum spendable budget for the CURRENT active bid
+    max_bid_limit = float(team.budget_total - actual_budget_used - reserved_budget)
+    spendable_budget = max(0.0, max_bid_limit)
     
     return {
         "budget_total": float(team.budget_total),
         "budget_used": float(actual_budget_used),
         "reserved_budget": max(0.0, reserved_budget),
-        "spendable_budget": max(0.0, spendable_budget),
+        "spendable_budget": spendable_budget,
+        "max_bid_limit": spendable_budget,
         "total_assigned_players": total_assigned,
         "remaining_slots": remaining_slots,
-        "is_squad_full": total_assigned >= SQUAD_TARGET
+        "squad_target": squad_target,
+        "is_squad_full": total_assigned >= squad_target
     }

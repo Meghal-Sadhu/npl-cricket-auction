@@ -98,7 +98,7 @@ async def auction_websocket(websocket: WebSocket, token: str = None):
                     current_price = highest_bid.amount if highest_bid else active_player.base_price
 
                     # Validate Bid using bid_service rules
-                    is_valid, err_msg = validate_bid(captain_team, bid_amount, current_price, db)
+                    is_valid, err_msg = validate_bid(captain_team, bid_amount, current_price, session, db)
                     if not is_valid:
                         await websocket.send_json({
                             "event": "BID_ERROR",

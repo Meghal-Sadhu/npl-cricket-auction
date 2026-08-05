@@ -86,8 +86,13 @@ export const TeamsPage: React.FC = () => {
     setEditLogoFile(null);
   };
 
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreatingTeam) return;
+    setIsCreatingTeam(true);
+
     try {
       const res = await api.post<Team>('/teams', {
         name: newTeamName,
@@ -103,6 +108,7 @@ export const TeamsPage: React.FC = () => {
         });
       }
 
+      alert('Franchise Team Created Successfully!');
       setShowModal(false);
       setNewTeamName('');
       setSelectedCaptainId('');
@@ -110,6 +116,8 @@ export const TeamsPage: React.FC = () => {
       fetchTeams();
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Failed to create team');
+    } finally {
+      setIsCreatingTeam(false);
     }
   };
 
@@ -389,9 +397,10 @@ export const TeamsPage: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-500/25"
+                disabled={isCreatingTeam}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs shadow-lg shadow-brand-500/25 cursor-pointer"
               >
-                Create Franchise
+                {isCreatingTeam ? 'Creating Franchise Team...' : 'Create Franchise'}
               </button>
             </form>
           </div>

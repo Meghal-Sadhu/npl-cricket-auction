@@ -122,8 +122,10 @@ export interface ApplicationSettings {
   team_budget: number;
   base_price: number;
   timer_seconds: number;
+  intermission_seconds?: number;
   min_players: number;
   max_players: number;
+  min_squad_size?: number;
   timer_reset_on_bid: boolean;
 }
 

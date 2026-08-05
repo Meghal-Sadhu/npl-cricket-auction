@@ -54,8 +54,10 @@ export const AuctionSettingsModal: React.FC<Props> = ({ isOpen, onClose, onSave 
           team_budget: 50000000.0,
           base_price: 500000.0,
           timer_seconds: settings.timer_seconds,
+          intermission_seconds: settings.intermission_seconds || 15,
           min_players: settings.min_players,
           max_players: settings.max_players,
+          min_squad_size: settings.min_squad_size || settings.min_players || 15,
           timer_reset_on_bid: settings.timer_reset_on_bid
         }
       });
@@ -162,15 +164,42 @@ export const AuctionSettingsModal: React.FC<Props> = ({ isOpen, onClose, onSave 
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Required Squad Size</label>
-                <input
-                  type="number"
-                  required
-                  value={settings.min_players}
-                  onChange={(e) => setSettings({ ...settings, min_players: parseInt(e.target.value) || 11, max_players: parseInt(e.target.value) || 11 })}
+                <label className="block text-xs font-bold text-slate-300 mb-1">Sold Intermission Break</label>
+                <select
+                  value={settings.intermission_seconds || 15}
+                  onChange={(e) => setSettings({ ...settings, intermission_seconds: parseInt(e.target.value) || 15 })}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
-                />
+                >
+                  <option value={10}>10 Seconds Break</option>
+                  <option value={15}>15 Seconds Break (Default)</option>
+                  <option value={20}>20 Seconds Break</option>
+                  <option value={30}>30 Seconds Break</option>
+                  <option value={45}>45 Seconds Break</option>
+                  <option value={60}>60 Seconds Break</option>
+                </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">Required Squad Target Size (Min Players per Team)</label>
+              <select
+                value={settings.min_squad_size || settings.min_players || 15}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 15;
+                  setSettings({ ...settings, min_players: val, max_players: val + 3, min_squad_size: val });
+                }}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+              >
+                <option value={11}>11 Players (Minimum XI)</option>
+                <option value={12}>12 Players</option>
+                <option value={13}>13 Players</option>
+                <option value={14}>14 Players</option>
+                <option value={15}>15 Players (Standard Squad)</option>
+                <option value={16}>16 Players</option>
+                <option value={18}>18 Players</option>
+                <option value={20}>20 Players</option>
+              </select>
+              <span className="text-[10px] text-slate-500 block mt-1">Reserves base price (₹5 Lakh) for remaining squad slots to ensure every team completes its squad.</span>
             </div>
 
             <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center justify-between">

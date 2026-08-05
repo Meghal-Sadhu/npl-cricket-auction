@@ -322,9 +322,17 @@ class AuctionEngine:
                     "base_price": player.base_price
                 })
 
-            # Auto advance to next player after 3 seconds pause if session is live
-            await asyncio.sleep(3)
-            if session.status == "live":
+            # Customizable Intermission Break (default 15 seconds)
+            break_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "intermission_seconds").first()
+            break_len = int(break_setting.value) if break_setting and break_setting.value else 15
+
+            await self.broadcast_state(event_type="INTERMISSION_START", extra={"intermission_seconds": break_len})
+            
+            for remaining in range(break_len, 0, -1):
+                await asyncio.sleep(1)
+                await self.broadcast_state(event_type="INTERMISSION_TICK", extra={"timer_seconds": remaining})
+
+            if session.status in ["live", "active"]:
                 await self.advance_to_next_player(db)
 
         except Exception as e:

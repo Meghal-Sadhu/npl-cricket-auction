@@ -12,9 +12,9 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
     """
     smtp_server = settings.SMTP_SERVER or "smtp.office365.com"
     smtp_port = settings.SMTP_PORT or 587
-    smtp_user = settings.SMTP_USER
+    smtp_user = settings.SMTP_USER or "meghal.sadhu@nikkisoceig.com"
     smtp_password = settings.SMTP_PASSWORD
-    from_email = settings.SMTP_FROM_EMAIL or smtp_user or "no-reply@nikkisoceig.com"
+    from_email = settings.SMTP_FROM_EMAIL or smtp_user
 
     subject = f"🔑 Your NPL 2027 Verification Code: {otp_code}"
 
@@ -59,9 +59,9 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
     """
 
     if not smtp_user or not smtp_password:
-        logger.warning(f"[EMAIL SERVICE WARNING] SMTP_USER or SMTP_PASSWORD not set in environment. OTP for {to_email} is {otp_code}")
-        print(f"[OUTLOOK EMAIL DISPATCH] To: {to_email} | OTP: {otp_code} (Configure SMTP_USER & SMTP_PASSWORD in .env for live Outlook sending)")
-        return True
+        logger.error(f"[OUTLOOK SMTP ERROR] SMTP_USER ({smtp_user}) or SMTP_PASSWORD not set in server environment. Unable to authenticate with Outlook SMTP server.")
+        print(f"[OUTLOOK SMTP MISSING CREDS] Sender: {smtp_user} | Recipient: {to_email} | OTP: {otp_code}")
+        return False
 
     try:
         msg = MIMEMultipart("alternative")
@@ -79,9 +79,9 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
             server.login(smtp_user, smtp_password)
             server.sendmail(from_email, [to_email], msg.as_string())
 
-        logger.info(f"OTP email successfully sent via Outlook SMTP to {to_email}")
+        logger.info(f"OTP email successfully sent via Outlook SMTP ({smtp_user}) to {to_email}")
         return True
     except Exception as e:
         logger.error(f"Failed to send OTP email via Outlook SMTP: {e}")
-        print(f"[OUTLOOK SMTP ERROR] Failed to send email to {to_email}: {e}")
+        print(f"[OUTLOOK SMTP ERROR] Failed to send email from {smtp_user} to {to_email}: {e}")
         return False

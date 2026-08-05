@@ -158,7 +158,12 @@ def send_reset_otp(req: SendOtpRequest, db: Session = Depends(get_db)):
     }
 
     # Dispatch email via Outlook SMTP service
-    send_otp_email(clean_email, otp_code)
+    sent = send_otp_email(clean_email, otp_code)
+    if not sent:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send OTP email via Outlook SMTP (meghal.sadhu@nikkisoceig.com). Please verify SMTP password configuration on server."
+        )
 
     return {
         "message": f"Verification OTP code sent to {clean_email}."

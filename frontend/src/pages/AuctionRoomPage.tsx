@@ -324,45 +324,7 @@ export const AuctionRoomPage: React.FC = () => {
             )}
           </div>
 
-          {/* Requirement 9: CURRENT HIGHEST BIDDER & LEADERBOARD BANNER (Placed directly below Active Player Card) */}
-          <div className="glass-card rounded-3xl p-5 border-2 border-gold-400/40 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-center space-y-3 shadow-xl relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-              <span className="text-xs font-bold text-gold-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Gavel className="w-4 h-4" /> Current Highest Bid on Hammer
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                {auctionState?.bids?.length || 0} Bids Placed
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between px-4 py-2">
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase font-bold block text-left">Active Price</span>
-                <p className="text-3xl font-black text-gold-400 tracking-tight font-mono">{formatPrice(currentPrice)}</p>
-              </div>
-
-              {auctionState?.highest_bidder_team ? (
-                <div className="flex items-center gap-3 bg-brand-500/10 px-4 py-2 rounded-2xl border border-brand-500/30">
-                  <Shield className="w-6 h-6 text-brand-400" />
-                  <div className="text-right">
-                    <span className="text-[9px] text-brand-400 font-bold uppercase block">Highest Bidder</span>
-                    <strong className="text-white text-sm font-extrabold">{auctionState.highest_bidder_team.name}</strong>
-                  </div>
-                </div>
-              ) : (
-                <span className="text-xs text-slate-500 font-medium">Opening Bid at Base Price</span>
-              )}
-            </div>
-
-            {/* Requirement 5: Consecutive Bid Block Warning Badge */}
-            {user?.role === 'captain' && isUserHighestBidder && (
-              <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-extrabold flex items-center justify-center gap-2">
-                <AlertCircle className="w-4 h-4" /> You are currently the highest bidder! Wait for another team to place a bid.
-              </div>
-            )}
-          </div>
-
-          {/* Admin Controls Panel */}
+          {/* Admin Controls Panel - Placed RIGHT BELOW Active Player on Hammer */}
           {user?.role === 'admin' && (
             <div className="glass-card rounded-3xl p-6 border border-slate-800 space-y-4">
               <div className="flex items-center justify-between">
@@ -476,6 +438,44 @@ export const AuctionRoomPage: React.FC = () => {
             </div>
           )}
 
+          {/* CURRENT HIGHEST BIDDER & LEADERBOARD BANNER */}
+          <div className="glass-card rounded-3xl p-5 border-2 border-gold-400/40 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-center space-y-3 shadow-xl relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <span className="text-xs font-bold text-gold-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Gavel className="w-4 h-4" /> Current Highest Bid on Hammer
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {auctionState?.bids?.length || 0} Bids Placed
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-2">
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block text-left">Active Price</span>
+                <p className="text-3xl font-black text-gold-400 tracking-tight font-mono">{formatPrice(currentPrice)}</p>
+              </div>
+
+              {auctionState?.highest_bidder_team ? (
+                <div className="flex items-center gap-3 bg-brand-500/10 px-4 py-2 rounded-2xl border border-brand-500/30">
+                  <Shield className="w-6 h-6 text-brand-400" />
+                  <div className="text-right">
+                    <span className="text-[9px] text-brand-400 font-bold uppercase block">Highest Bidder</span>
+                    <strong className="text-white text-sm font-extrabold">{auctionState.highest_bidder_team.name}</strong>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-xs text-slate-500 font-medium">Opening Bid at Base Price</span>
+              )}
+            </div>
+
+            {/* Consecutive Bid Block Warning Badge */}
+            {user?.role === 'captain' && isUserHighestBidder && (
+              <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-extrabold flex items-center justify-center gap-2">
+                <AlertCircle className="w-4 h-4" /> You are currently the highest bidder! Wait for another team to place a bid.
+              </div>
+            )}
+          </div>
+
           {/* Embedded Interactive Auction Queue Drawer - VISIBLE ONLY TO ADMIN */}
           {user?.role === 'admin' && (
             <AuctionQueueDrawer
@@ -560,13 +560,23 @@ export const AuctionRoomPage: React.FC = () => {
 
           </div>
 
-          {/* Live Bids History Feed Card */}
+          {/* Live Bids History Feed Card with Highest Bid Info inside Header */}
           <div className="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-gold-400">
                 <Gavel className="w-3.5 h-3.5" /> Recent Bids History
               </span>
-              <span className="text-[10px] text-slate-500 font-normal">{auctionState?.bids?.length || 0} Bids Logged</span>
+              
+              {/* Requirement 4: Show Highest Bid Message Inside Recent Bids History Title */}
+              {auctionState?.highest_bidder_team ? (
+                <span className="px-2.5 py-1 rounded-xl bg-gold-500/20 text-gold-400 border border-gold-500/30 text-[10px] font-black truncate max-w-[200px]">
+                  Top: {formatPrice(currentPrice)} ({auctionState.highest_bidder_team.name})
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-500 font-mono">
+                  Base: {formatPrice(currentPrice)}
+                </span>
+              )}
             </h4>
 
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">

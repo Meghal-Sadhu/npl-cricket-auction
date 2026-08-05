@@ -326,14 +326,20 @@ class AuctionEngine:
             break_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "intermission_seconds").first()
             break_len = int(break_setting.value) if break_setting and break_setting.value else 15
 
+            # Set status to "intermission" during break so no bids can be placed
+            session.status = "intermission"
+            db.commit()
+
             await self.broadcast_state(event_type="INTERMISSION_START", extra={"intermission_seconds": break_len})
             
             for remaining in range(break_len, 0, -1):
                 await asyncio.sleep(1)
                 await self.broadcast_state(event_type="INTERMISSION_TICK", extra={"timer_seconds": remaining})
 
-            if session.status in ["live", "active"]:
-                await self.advance_to_next_player(db)
+            # Auto-resume auction to next player!
+            session.status = "live"
+            db.commit()
+            await self.advance_to_next_player(db)
 
         except Exception as e:
             logger.error(f"Error handling timer expired: {e}")

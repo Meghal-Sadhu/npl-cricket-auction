@@ -171,7 +171,7 @@ export const Navbar: React.FC = () => {
     (link) => user && link.roles.includes(user.role)
   );
 
-  const isFieldsLocked = isSubmitted && user?.role !== 'admin';
+  const isFieldsLocked = false;
 
   return (
     <>
@@ -413,12 +413,6 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
 
-            {isFieldsLocked && (
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold flex items-center gap-2">
-                <Lock className="w-4 h-4 flex-shrink-0" />
-                <span>Profile info submitted! Non-jersey fields are locked. You can only update Jersey Specifications.</span>
-              </div>
-            )}
 
             <p className="text-xs text-slate-400">
               Update your corporate player profile information across all tournament records.

@@ -26,6 +26,7 @@ export const AuctionRoomPage: React.FC = () => {
     team_name: string;
     amount: number;
     image_path?: string;
+    is_unsold?: boolean;
   } | null>(null);
 
   // Requirement 3: Direct sale state for Admin
@@ -146,8 +147,13 @@ export const AuctionRoomPage: React.FC = () => {
     auctionState.bids[0].team_id === userTeam.id
   );
 
-  // Timer Calculation
+  // Intermission Break & Sold Overlay Calculations
   const timerSeconds = auctionState?.timer_seconds ?? maxTimerDuration;
+  const isIntermission = auctionState?.status === 'intermission';
+  const activeSoldInfo = soldOverlay || auctionState?.last_sold_info;
+  const currentIntermissionSeconds = intermissionTime ?? auctionState?.intermission_seconds ?? timerSeconds;
+
+  // Timer Calculation
   const currentMax = Math.max(maxTimerDuration, timerSeconds);
   const timerPercentage = Math.min(100, Math.max(0, (timerSeconds / currentMax) * 100));
   const strokeDashoffset = 377 - (377 * timerPercentage) / 100;
@@ -155,47 +161,42 @@ export const AuctionRoomPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 relative">
       
-      {/* Requirement 2 & 6: SOLD PLAYER CELEBRATION MODAL OVERLAY */}
-      {soldOverlay && (
+      {/* SOLD / UNSOLD PLAYER CELEBRATION MODAL OVERLAY */}
+      {activeSoldInfo && isIntermission && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="glass-card rounded-3xl p-8 sm:p-10 w-full max-w-lg border-2 border-gold-400/50 text-center space-y-6 relative overflow-hidden shadow-2xl shadow-gold-500/20">
             <div className="absolute top-0 right-0 w-96 h-96 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
             
-            <span className="px-4 py-1.5 rounded-full bg-gold-500/20 text-gold-400 text-xs font-black uppercase tracking-widest border border-gold-500/30 shadow-lg inline-flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" /> 🎉 PLAYER SOLD!
+            <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border shadow-lg inline-flex items-center gap-1.5 ${
+              activeSoldInfo.is_unsold
+                ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                : 'bg-gold-500/20 text-gold-400 border-gold-500/30'
+            }`}>
+              <Sparkles className="w-4 h-4" /> {activeSoldInfo.is_unsold ? '⚠️ PLAYER UNSOLD' : '🎉 PLAYER SOLD!'}
             </span>
 
             <div className="w-40 h-40 mx-auto rounded-3xl bg-slate-900 border-4 border-gold-400/80 overflow-hidden shadow-2xl flex items-center justify-center">
-              {soldOverlay.image_path ? (
-                <img src={getImageUrl(soldOverlay.image_path)} alt={soldOverlay.player_name} className="w-full h-full object-cover object-top" />
+              {activeSoldInfo.image_path ? (
+                <img src={getImageUrl(activeSoldInfo.image_path)} alt={activeSoldInfo.player_name} className="w-full h-full object-cover object-top" />
               ) : (
-                <span className="text-5xl font-black text-gold-400">{soldOverlay.player_name.charAt(0)}</span>
+                <span className="text-5xl font-black text-gold-400">{activeSoldInfo.player_name?.charAt(0)}</span>
               )}
             </div>
 
             <div>
-              <h2 className="text-3xl font-black text-white tracking-tight">{soldOverlay.player_name}</h2>
+              <h2 className="text-3xl font-black text-white tracking-tight">{activeSoldInfo.player_name}</h2>
               <p className="text-sm font-bold text-slate-400 mt-1">
-                SOLD TO <span className="text-emerald-400 uppercase font-black text-base">{soldOverlay.team_name}</span>
+                {activeSoldInfo.is_unsold ? 'PASSED AT BASE PRICE' : `SOLD TO ${activeSoldInfo.team_name.toUpperCase()}`}
               </p>
               <div className="mt-3 inline-block px-6 py-2 rounded-2xl bg-gold-500/20 border border-gold-400/40 text-gold-400 font-black text-2xl font-mono shadow-xl">
-                {formatPrice(soldOverlay.amount)}
+                {formatPrice(activeSoldInfo.amount)}
               </div>
             </div>
 
-            {intermissionTime !== null && (
-              <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 font-bold flex items-center justify-center gap-2">
-                <Clock className="w-4 h-4 text-brand-400 animate-spin" />
-                Intermission Break: <span className="text-gold-400 font-black font-mono text-sm">{intermissionTime}s</span> (Preparing Next Player)
-              </div>
-            )}
-
-            <button
-              onClick={() => setSoldOverlay(null)}
-              className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700"
-            >
-              Close Overlay
-            </button>
+            <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-gold-400/30 text-xs text-slate-300 font-bold flex items-center justify-center gap-2 shadow-inner">
+              <Clock className="w-4.5 h-4.5 text-gold-400 animate-spin" />
+              Next Player Starting In: <span className="text-gold-400 font-black font-mono text-base">{currentIntermissionSeconds}s</span>
+            </div>
           </div>
         </div>
       )}
@@ -213,7 +214,7 @@ export const AuctionRoomPage: React.FC = () => {
                 : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}>
               <Radio className={`w-3.5 h-3.5 ${isLive ? 'animate-pulse text-emerald-400' : ''}`} />
-              {auctionState?.status === 'live' ? 'LIVE AUCTION' : auctionState?.status === 'paused' ? 'AUCTION PAUSED' : 'AUCTION READY'}
+              {auctionState?.status === 'live' ? 'LIVE AUCTION' : auctionState?.status === 'intermission' ? 'POST-SALE BREAK' : auctionState?.status === 'paused' ? 'AUCTION PAUSED' : 'AUCTION READY'}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">Official Nikkiso Corporate Cricket Premier League 2027 Auction Portal</p>
@@ -229,8 +230,8 @@ export const AuctionRoomPage: React.FC = () => {
         )}
       </div>
 
-      {/* Requirement 3: 15-Second Post-Sale Intermission Break Countdown Banner */}
-      {(auctionState?.status === 'intermission' || intermissionTime !== null) && (
+      {/* 15-Second Post-Sale Intermission Break Countdown Banner */}
+      {isIntermission && (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-gold-500/20 via-amber-500/20 to-gold-500/20 border-2 border-gold-400/50 text-gold-300 text-sm font-black flex items-center justify-between shadow-2xl animate-pulse">
           <div className="flex items-center gap-3">
             <Clock className="w-5 h-5 text-gold-400 animate-spin" />
@@ -238,7 +239,7 @@ export const AuctionRoomPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 bg-slate-950/80 px-4 py-1.5 rounded-xl border border-gold-400/30">
             <span className="text-xs text-slate-400 font-bold uppercase">Next Player In:</span>
-            <span className="text-xl font-extrabold font-mono text-gold-400">{intermissionTime ?? 15}s</span>
+            <span className="text-xl font-extrabold font-mono text-gold-400">{currentIntermissionSeconds}s</span>
           </div>
         </div>
       )}

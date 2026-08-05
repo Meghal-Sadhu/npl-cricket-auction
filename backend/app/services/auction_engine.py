@@ -19,6 +19,8 @@ class AuctionEngine:
         self.timer_task: Optional[asyncio.Task] = None
         self.timer_seconds: int = 30
         self.is_running: bool = False
+        self.intermission_seconds: Optional[int] = None
+        self.last_sold_info: Optional[Dict[str, Any]] = None
 
     def sync_auction_queue(self, db: Session, session_id: int):
         # 1. Identify all exempt User IDs (Captains and Admins)
@@ -75,7 +77,7 @@ class AuctionEngine:
                 db.add(AuctionQueue(
                     session_id=session_id,
                     player_id=p.id,
-                    order_index=max_order + idx,
+                    order_index=max_order + idx + 1,
                     status="queued"
                 ))
             db.commit()
@@ -94,7 +96,8 @@ class AuctionEngine:
         # Dynamic Default Timer setting lookup
         timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()
         configured_timer = int(timer_setting.value) if timer_setting else 30
-        display_timer = self.timer_seconds if self.is_running else configured_timer
+        
+        display_timer = self.intermission_seconds if session.status == "intermission" and self.intermission_seconds is not None else (self.timer_seconds if self.is_running else configured_timer)
 
         current_player = None
         highest_bid = None
@@ -205,6 +208,8 @@ class AuctionEngine:
             "session_id": session.id,
             "status": session.status,
             "timer_seconds": display_timer,
+            "intermission_seconds": self.intermission_seconds if session.status == "intermission" else None,
+            "last_sold_info": self.last_sold_info if session.status == "intermission" else None,
             "current_player": current_player,
             "highest_bid": highest_bid,
             "highest_bidder_team": highest_bidder_team,
@@ -299,11 +304,15 @@ class AuctionEngine:
                 db.add(notif)
                 db.commit()
 
-                await self.broadcast_state(event_type="PLAYER_SOLD", extra={
+                self.last_sold_info = {
                     "player_name": player.user.name,
                     "team_name": last_bid.team.name,
-                    "amount": last_bid.amount
-                })
+                    "amount": last_bid.amount,
+                    "image_path": player.image_path,
+                    "is_unsold": False
+                }
+
+                await self.broadcast_state(event_type="PLAYER_SOLD", extra=self.last_sold_info)
 
             else:
                 # Player Unsold!
@@ -317,10 +326,15 @@ class AuctionEngine:
                 db.add(notif)
                 db.commit()
 
-                await self.broadcast_state(event_type="PLAYER_UNSOLD", extra={
+                self.last_sold_info = {
                     "player_name": player.user.name,
-                    "base_price": player.base_price
-                })
+                    "team_name": "UNSOLD",
+                    "amount": player.base_price,
+                    "image_path": player.image_path,
+                    "is_unsold": True
+                }
+
+                await self.broadcast_state(event_type="PLAYER_UNSOLD", extra=self.last_sold_info)
 
             # Customizable Intermission Break (default 15 seconds)
             break_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "intermission_seconds").first()
@@ -330,11 +344,14 @@ class AuctionEngine:
             session.status = "intermission"
             db.commit()
 
-            await self.broadcast_state(event_type="INTERMISSION_START", extra={"intermission_seconds": break_len})
-            
             for remaining in range(break_len, 0, -1):
+                self.intermission_seconds = remaining
+                await self.broadcast_state(event_type="INTERMISSION_TICK", extra={
+                    "timer_seconds": remaining,
+                    "intermission_seconds": remaining,
+                    "last_sold_info": self.last_sold_info
+                })
                 await asyncio.sleep(1)
-                await self.broadcast_state(event_type="INTERMISSION_TICK", extra={"timer_seconds": remaining})
 
             # Auto-resume auction to next player!
             session.status = "live"
@@ -349,8 +366,12 @@ class AuctionEngine:
 
     async def advance_to_next_player(self, db: Session):
         session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
-        if not session or session.status != "live":
+        if not session:
             return
+
+        # Clear last sold info and intermission state for new player
+        self.last_sold_info = None
+        self.intermission_seconds = None
 
         # Find next queued player
         next_queue = db.query(AuctionQueue).filter(
@@ -360,6 +381,7 @@ class AuctionEngine:
 
         if next_queue:
             session.current_player_id = next_queue.player_id
+            session.status = "live"
             next_queue.status = "current"
             db.commit()
             

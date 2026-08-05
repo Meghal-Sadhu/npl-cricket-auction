@@ -106,6 +106,14 @@ export interface AuctionState {
   session_id: number;
   status: 'not_started' | 'live' | 'paused' | 'held' | 'completed' | 'intermission';
   timer_seconds: number;
+  intermission_seconds?: number;
+  last_sold_info?: {
+    player_name: string;
+    team_name: string;
+    amount: number;
+    image_path?: string;
+    is_unsold?: boolean;
+  };
   current_player?: CurrentPlayer;
   highest_bid?: number;
   highest_bidder_team?: {

@@ -2,6 +2,7 @@ import asyncio
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
+from app.models.user import User
 from app.models.auction import AuctionSession, AuctionQueue, Bid
 from app.models.player import PlayerProfile
 from app.models.team import Team, TeamPlayer

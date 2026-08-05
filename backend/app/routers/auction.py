@@ -53,26 +53,8 @@ async def start_auction(
     else:
         session.status = "live"
 
-    # Fetch all captain user IDs to exclude from auction queue
-    captain_ids = [t.captain_id for t in db.query(Team).all() if t.captain_id]
-
-    # Populate queue if empty
-    queue_count = db.query(AuctionQueue).filter(AuctionQueue.session_id == session.id).count()
-    if queue_count == 0:
-        players = db.query(PlayerProfile).join(User).filter(
-            PlayerProfile.is_sold == False,
-            ~User.id.in_(captain_ids) if captain_ids else True
-        ).all()
-
-        for idx, p in enumerate(players):
-            q_entry = AuctionQueue(
-                session_id=session.id,
-                player_id=p.id,
-                order_index=idx,
-                status="queued"
-            )
-            db.add(q_entry)
-        db.commit()
+    # Auto-sync queue for all non-captain players
+    auction_engine.sync_auction_queue(db, session.id)
 
     # Pick first player if none current
     if not session.current_player_id:

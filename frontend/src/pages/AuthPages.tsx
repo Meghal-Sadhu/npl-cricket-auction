@@ -2,31 +2,110 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../api/client';
-import { Mail, Lock, User as UserIcon, Building, ArrowRight, Sparkles, KeyRound, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Building, ArrowRight, Sparkles, KeyRound, CheckCircle, ShieldCheck } from 'lucide-react';
 
 export const AuthPages: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [forgotStep, setForgotStep] = useState<'email' | 'otp' | 'new_password'>('email');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [department, setDepartment] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [demoOtpNotice, setDemoOtpNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+    setDemoOtpNotice(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.endsWith('@nikkisoceig.com')) {
+      setError('Corporate email must end with @nikkisoceig.com');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/send-reset-otp', { email: cleanEmail });
+      setSuccessMsg(res.data.message || `OTP sent to ${cleanEmail}`);
+      if (res.data.otp) {
+        setDemoOtpNotice(`Verification Code: ${res.data.otp}`);
+        setOtpCode(res.data.otp); // Pre-fill for convenience
+      }
+      setForgotStep('otp');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to send OTP code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/verify-reset-otp', {
+        email: cleanEmail,
+        otp: otpCode.trim()
+      });
+      setSuccessMsg(res.data.message || 'OTP verified successfully!');
+      setDemoOtpNotice(null);
+      setForgotStep('new_password');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Invalid OTP code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/reset-password', {
+        email: cleanEmail,
+        otp: otpCode.trim(),
+        new_password: newPassword
+      });
+      setSuccessMsg(res.data.message || 'Password updated successfully! Please sign in.');
+      setAuthMode('login');
+      setPassword('');
+      setOtpCode('');
+      setNewPassword('');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to reset password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
 
     const cleanEmail = email.trim().toLowerCase();
 
-    if (authMode !== 'login' && !cleanEmail.endsWith('@nikkisoceig.com')) {
+    if (authMode === 'register' && !cleanEmail.endsWith('@nikkisoceig.com')) {
       setError('Corporate email must end with @nikkisoceig.com');
       return;
     }
@@ -47,14 +126,6 @@ export const AuthPages: React.FC = () => {
         });
         login(res.data.access_token, res.data.user);
         navigate('/register-profile');
-      } else if (authMode === 'forgot') {
-        const res = await api.post('/auth/reset-password', {
-          email: cleanEmail,
-          new_password: newPassword
-        });
-        setSuccessMsg(res.data.message || 'Password reset successfully! Please sign in.');
-        setAuthMode('login');
-        setPassword('');
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Authentication operation failed.');
@@ -99,14 +170,14 @@ export const AuthPages: React.FC = () => {
             <p className="text-xs text-slate-400 mt-1">
               {authMode === 'login' && 'Sign in with your corporate @nikkisoceig.com credentials'}
               {authMode === 'register' && 'Register your corporate player profile'}
-              {authMode === 'forgot' && 'Reset your corporate account password'}
+              {authMode === 'forgot' && 'Reset your password via corporate email OTP'}
             </p>
           </div>
 
           {/* Mode Switcher */}
           <div className="flex bg-slate-900/80 rounded-xl p-1 mb-6 border border-slate-800">
             <button
-              onClick={() => { setAuthMode('login'); setError(null); setSuccessMsg(null); }}
+              onClick={() => { setAuthMode('login'); setError(null); setSuccessMsg(null); setDemoOtpNotice(null); }}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                 authMode === 'login' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
@@ -114,7 +185,7 @@ export const AuthPages: React.FC = () => {
               Sign In
             </button>
             <button
-              onClick={() => { setAuthMode('register'); setError(null); setSuccessMsg(null); }}
+              onClick={() => { setAuthMode('register'); setError(null); setSuccessMsg(null); setDemoOtpNotice(null); }}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                 authMode === 'register' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
@@ -130,78 +201,195 @@ export const AuthPages: React.FC = () => {
             </div>
           )}
 
+          {demoOtpNotice && (
+            <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-between">
+              <span>{demoOtpNotice}</span>
+              <span className="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded text-amber-400">Auto-filled</span>
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium text-center">
               {error}
             </div>
           )}
 
-          {/* Auth Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {authMode === 'register' && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Full Name</label>
-                  <div className="relative">
-                    <UserIcon className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Virat Kohli"
-                      className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Department</label>
-                  <div className="relative">
-                    <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                    <input
-                      type="text"
-                      required
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      placeholder="Engineering / Operations"
-                      className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Corporate Email</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@nikkisoceig.com"
-                  className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
-                />
+          {/* FORGOT PASSWORD MULTI-STEP FLOW */}
+          {authMode === 'forgot' ? (
+            <div className="space-y-4">
+              
+              {/* Step Indicators */}
+              <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 pb-2 border-b border-slate-800">
+                <span className={forgotStep === 'email' ? 'text-brand-400 font-extrabold' : ''}>1. Email</span>
+                <span>→</span>
+                <span className={forgotStep === 'otp' ? 'text-brand-400 font-extrabold' : ''}>2. Verify OTP</span>
+                <span>→</span>
+                <span className={forgotStep === 'new_password' ? 'text-brand-400 font-extrabold' : ''}>3. New Password</span>
               </div>
-            </div>
 
-            {authMode !== 'forgot' && (
+              {/* STEP 1: ENTER EMAIL */}
+              {forgotStep === 'email' && (
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Enter Corporate Email</label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="name@nikkisoceig.com"
+                        className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-4"
+                  >
+                    {loading ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <> Send OTP Verification Code <ArrowRight className="w-4 h-4" /> </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* STEP 2: ENTER OTP */}
+              {forgotStep === 'otp' && (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">6-Digit OTP Code</label>
+                    <div className="relative">
+                      <ShieldCheck className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="123456"
+                        className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono tracking-widest text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-4"
+                  >
+                    {loading ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <> Verify OTP Code <ArrowRight className="w-4 h-4" /> </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* STEP 3: NEW PASSWORD */}
+              {forgotStep === 'new_password' && (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Password</label>
+                    <div className="relative">
+                      <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new strong password"
+                        className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-4"
+                  >
+                    {loading ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <> Update Password & Sign In <CheckCircle className="w-4 h-4" /> </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              <button
+                type="button"
+                onClick={() => { setAuthMode('login'); setError(null); setSuccessMsg(null); }}
+                className="w-full text-center text-xs text-slate-400 hover:text-white font-semibold pt-2 block"
+              >
+                Back to Sign In
+              </button>
+
+            </div>
+          ) : (
+
+            /* STANDARD SIGN IN / REGISTER FORM */
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              
+              {authMode === 'register' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Full Name</label>
+                    <div className="relative">
+                      <UserIcon className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Virat Kohli"
+                        className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Department</label>
+                    <div className="relative">
+                      <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                      <input
+                        type="text"
+                        required
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                        placeholder="Engineering / Operations"
+                        className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-300">Password</label>
-                  {authMode === 'login' && (
-                    <button
-                      type="button"
-                      onClick={() => { setAuthMode('forgot'); setError(null); setSuccessMsg(null); }}
-                      className="text-[11px] text-brand-400 hover:text-brand-300 font-bold transition-colors"
-                    >
-                      Forgot Password?
-                    </button>
-                  )}
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Corporate Email</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@nikkisoceig.com"
+                    className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                   <input
@@ -214,54 +402,38 @@ export const AuthPages: React.FC = () => {
                   />
                 </div>
               </div>
-            )}
 
-            {authMode === 'forgot' && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Password</label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new strong password"
-                    className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
-                  />
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-6"
-            >
-              {loading ? (
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  {authMode === 'login' && 'Sign In to Platform'}
-                  {authMode === 'register' && 'Create Player Account'}
-                  {authMode === 'forgot' && 'Reset Password'}
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-
-            {authMode === 'forgot' && (
               <button
-                type="button"
-                onClick={() => { setAuthMode('login'); setError(null); }}
-                className="w-full text-center text-xs text-slate-400 hover:text-white font-semibold pt-2 block"
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-6"
               >
-                Back to Sign In
+                {loading ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    {authMode === 'login' && 'Sign In to Platform'}
+                    {authMode === 'register' && 'Create Player Account'}
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
-            )}
 
-          </form>
+              {/* Requirement 1: Forgot Password Button Below Sign In Option */}
+              {authMode === 'login' && (
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('forgot'); setForgotStep('email'); setError(null); setSuccessMsg(null); }}
+                    className="text-xs text-brand-400 hover:text-brand-300 font-semibold transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+
+            </form>
+          )}
 
         </div>
       </div>

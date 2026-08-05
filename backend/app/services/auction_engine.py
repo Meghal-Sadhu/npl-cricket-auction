@@ -19,6 +19,49 @@ class AuctionEngine:
         self.timer_seconds: int = 30
         self.is_running: bool = False
 
+    def sync_auction_queue(self, db: Session, session_id: int):
+        # 1. Identify all captain User IDs across Team records and User roles
+        captain_user_ids = set()
+        for t in db.query(Team).all():
+            if t.captain_id:
+                captain_user_ids.add(t.captain_id)
+        for u in db.query(User).filter(User.role == "captain").all():
+            captain_user_ids.add(u.id)
+
+        # 2. Remove any captains from the queue if present
+        if captain_user_ids:
+            captain_profiles = db.query(PlayerProfile).filter(PlayerProfile.user_id.in_(captain_user_ids)).all()
+            captain_profile_ids = [p.id for p in captain_profiles]
+            if captain_profile_ids:
+                db.query(AuctionQueue).filter(
+                    AuctionQueue.session_id == session_id,
+                    AuctionQueue.player_id.in_(captain_profile_ids)
+                ).delete(synchronize_session=False)
+                db.commit()
+
+        # 3. Find all unsold non-captain players not yet queued in this session
+        existing_queued_player_ids = set(
+            r[0] for r in db.query(AuctionQueue.player_id).filter(AuctionQueue.session_id == session_id).all()
+        )
+
+        query = db.query(PlayerProfile).join(User).filter(PlayerProfile.is_sold == False)
+        if captain_user_ids:
+            query = query.filter(~User.id.in_(captain_user_ids))
+
+        all_eligible_players = query.all()
+        unqueued_players = [p for p in all_eligible_players if p.id not in existing_queued_player_ids]
+
+        if unqueued_players:
+            max_order = db.query(AuctionQueue).filter(AuctionQueue.session_id == session_id).count()
+            for idx, p in enumerate(unqueued_players):
+                db.add(AuctionQueue(
+                    session_id=session_id,
+                    player_id=p.id,
+                    order_index=max_order + idx,
+                    status="queued"
+                ))
+            db.commit()
+
     def get_full_state(self, db: Session, user_role: str = "admin", user_team_id: Optional[int] = None) -> Dict[str, Any]:
         session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
         if not session:
@@ -26,6 +69,9 @@ class AuctionEngine:
             db.add(session)
             db.commit()
             db.refresh(session)
+
+        # Auto-sync queue to ensure all non-captain players are queued
+        self.sync_auction_queue(db, session.id)
 
         # Dynamic Default Timer setting lookup
         timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()

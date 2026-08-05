@@ -99,19 +99,82 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     return Token(access_token=access_token, user=UserOut.model_validate(user))
 
 
-from pydantic import BaseModel
+import random
 
-class ResetPasswordRequest(BaseModel):
+_otp_store: dict = {}  # clean_email -> {"otp": str, "expires_at": float, "verified": bool}
+
+class SendOtpRequest(BaseModel):
     email: str
+
+class VerifyOtpRequest(BaseModel):
+    email: str
+    otp: str
+
+class ResetPasswordWithOtpRequest(BaseModel):
+    email: str
+    otp: str
     new_password: str
 
+@router.post("/send-reset-otp")
+def send_reset_otp(req: SendOtpRequest, db: Session = Depends(get_db)):
+    clean_email = req.email.strip().lower()
+    if not clean_email.endswith("@nikkisoceig.com"):
+        raise HTTPException(
+            status_code=400,
+            detail="OTP request is restricted to @nikkisoceig.com corporate email addresses."
+        )
+
+    user = db.query(User).filter(func.lower(User.email) == clean_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No registered account found with this corporate email address.")
+
+    otp_code = str(random.randint(100000, 999999))
+    _otp_store[clean_email] = {
+        "otp": otp_code,
+        "expires_at": time() + 600,  # 10 minutes validity
+        "verified": False
+    }
+
+    return {
+        "message": f"Verification OTP code sent to {clean_email}.",
+        "otp": otp_code
+    }
+
+@router.post("/verify-reset-otp")
+def verify_reset_otp(req: VerifyOtpRequest):
+    clean_email = req.email.strip().lower()
+    clean_otp = req.otp.strip()
+
+    entry = _otp_store.get(clean_email)
+    if not entry:
+        raise HTTPException(status_code=400, detail="No OTP requested for this email address. Please request a new OTP.")
+
+    if time() > entry["expires_at"]:
+        _otp_store.pop(clean_email, None)
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new OTP.")
+
+    if entry["otp"] != clean_otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP verification code. Please check and try again.")
+
+    entry["verified"] = True
+    return {"message": "OTP verified successfully. You may now create your new password.", "verified": True}
+
 @router.post("/reset-password")
-def reset_password(reset_in: ResetPasswordRequest, db: Session = Depends(get_db)):
+def reset_password(reset_in: ResetPasswordWithOtpRequest, db: Session = Depends(get_db)):
     clean_email = reset_in.email.strip().lower()
+    clean_otp = reset_in.otp.strip()
+
     if not clean_email.endswith("@nikkisoceig.com"):
         raise HTTPException(
             status_code=400,
             detail="Password reset is restricted to @nikkisoceig.com corporate email addresses."
+        )
+
+    entry = _otp_store.get(clean_email)
+    if not entry or not entry.get("verified") or entry.get("otp") != clean_otp:
+        raise HTTPException(
+            status_code=400,
+            detail="OTP verification required before updating password. Please verify OTP first."
         )
 
     if len(reset_in.new_password) < 6:
@@ -124,7 +187,9 @@ def reset_password(reset_in: ResetPasswordRequest, db: Session = Depends(get_db)
     user.password_hash = get_password_hash(reset_in.new_password)
     db.commit()
 
-    return {"message": f"Password reset successfully for {user.email}. You can now sign in with your new password."}
+    _otp_store.pop(clean_email, None)
+
+    return {"message": f"Password updated successfully for {user.email}. You can now sign in with your new password."}
 
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):

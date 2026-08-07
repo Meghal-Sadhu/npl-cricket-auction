@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useAuctionStore } from '../../store/auctionStore';
 import { api, getImageUrl } from '../../api/client';
 import { AuctionSettingsModal } from '../auction/AuctionSettingsModal';
+import { DEPARTMENTS } from '../../types';
 import { 
   Trophy, Shield, Users, Radio, PieChart, Heart, 
   UserCheck, LogOut, Bell, ChevronDown, User, Edit3, X, Sparkles, CheckCircle, AlertTriangle, Info, Settings, Menu, Lock 
@@ -113,6 +114,10 @@ export const Navbar: React.FC = () => {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userPhotoUrl && !editPhotoFile) {
+      alert('📸 PLAYER PHOTO IS MANDATORY! Please upload your profile photo.');
+      return;
+    }
     setSavingProfile(true);
     try {
       await api.put('/players/profile/me', {
@@ -436,14 +441,17 @@ export const Navbar: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1">Department</label>
-                  <input
-                    type="text"
+                  <select
                     disabled={isFieldsLocked}
                     value={editDept}
                     onChange={(e) => setEditDept(e.target.value)}
-                    placeholder="Engineering / Operations"
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-950/80"
-                  />
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-950/80 cursor-pointer"
+                  >
+                    <option value="">Select Corporate Department...</option>
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

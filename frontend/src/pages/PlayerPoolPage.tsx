@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuthStore } from '../store/authStore';
 import { api, getImageUrl } from '../api/client';
-import { PlayerProfile, Team } from '../types';
+import { PlayerProfile, Team, DEPARTMENTS } from '../types';
 import { PlayerDetailModal } from '../components/players/PlayerDetailModal';
 import { Search, Filter, Heart, Plus, UserPlus, Shield, Award, CheckCircle, Check, X, Download, RotateCcw } from 'lucide-react';
 
@@ -583,14 +583,18 @@ export const PlayerPoolPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1">Department</label>
-                  <input
-                    type="text"
+                  <select
                     value={isShopfloor ? 'Shopfloor' : newDept}
                     disabled={isShopfloor}
                     onChange={(e) => setNewDept(e.target.value)}
-                    placeholder="Engineering"
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white disabled:opacity-60"
-                  />
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white disabled:opacity-60 cursor-pointer"
+                  >
+                    <option value="">Select Department...</option>
+                    <option value="Shopfloor">Shopfloor</option>
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1">Employee ID</label>

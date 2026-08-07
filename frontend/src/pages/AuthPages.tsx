@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../api/client';
 import { Mail, Lock, User as UserIcon, Building, ArrowRight, Sparkles, KeyRound, CheckCircle, ShieldCheck } from 'lucide-react';
+import { DEPARTMENTS } from '../types';
 
 export const AuthPages: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -348,15 +349,18 @@ export const AuthPages: React.FC = () => {
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5">Department</label>
                     <div className="relative">
-                      <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                      <input
-                        type="text"
+                      <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3 z-10 pointer-events-none" />
+                      <select
                         required
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
-                        placeholder="Engineering / Operations"
-                        className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
-                      />
+                        className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 transition-colors cursor-pointer"
+                      >
+                        <option value="">Select Corporate Department...</option>
+                        {DEPARTMENTS.map((dept) => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </>

@@ -173,10 +173,46 @@ export interface AnalyticsDashboard {
   team_spend_breakdown: Array<{
     team_id: number;
     team_name: string;
-    captain_name: string;
-    player_count: number;
+    captain_name?: string;
+    logo_path?: string;
     budget_total: number;
     budget_used: number;
     spendable_budget: number;
+    players_count?: number;
+    player_count?: number;
   }>;
 }
+
+export const DEPARTMENTS = [
+  "Accounts",
+  "Aftermarket Sales",
+  "Application",
+  "Automation & Control",
+  "Business Analytics",
+  "Commissioning",
+  "Design",
+  "EHS",
+  "Electrical",
+  "Engineering",
+  "EXIM & Commercial",
+  "Facility Maintenance",
+  "HR & IR",
+  "Instrumentation",
+  "IT",
+  "Legal & Compliance",
+  "Maintenance",
+  "Management",
+  "Manufacturing",
+  "Manufacturing Planning",
+  "Process",
+  "Project Management",
+  "Project Planning",
+  "Purchase",
+  "Quality",
+  "Sales",
+  "Sales & Service",
+  "Service",
+  "Store",
+  "Supply Chain Management",
+  "Technical Project Management"
+];

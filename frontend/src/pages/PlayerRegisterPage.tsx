@@ -64,6 +64,13 @@ export const PlayerRegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // MANDATORY PHOTO CHECK FOR PLAYER REGISTRATION
+    if (!imageFile && !imagePreview) {
+      setError('📸 PLAYER PHOTO IS MANDATORY! Please upload your profile photo before submitting.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -108,9 +115,9 @@ export const PlayerRegisterPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           
-          {/* Photo Upload Section */}
-          <div className="flex items-center gap-6 p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div className="w-20 h-20 rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center relative">
+          {/* Photo Upload Section - MANDATORY */}
+          <div className="flex items-center gap-6 p-4 rounded-2xl bg-slate-900/80 border border-amber-500/40 shadow-md">
+            <div className="w-20 h-20 rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center relative flex-shrink-0">
               {imagePreview ? (
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
               ) : (
@@ -118,14 +125,18 @@ export const PlayerRegisterPage: React.FC = () => {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Player Photo (JPG, PNG, WEBP)</label>
+              <label className="block text-xs font-bold text-white mb-1">
+                Player Photo (JPG, PNG, WEBP) <span className="text-rose-400 font-extrabold text-xs ml-1">* (Mandatory)</span>
+              </label>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleImageChange}
                 className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 block mt-1">Maximum file size: 5 MB</span>
+              <span className="text-[10px] text-amber-400/90 font-medium block mt-1">
+                ⚠️ Uploading your clear profile picture is required to register for the NPL auction. (Max size: 5 MB)
+              </span>
             </div>
           </div>
 

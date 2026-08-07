@@ -35,10 +35,13 @@ export interface PlayerProfile {
   is_submitted?: boolean;
   is_shopfloor?: boolean;
   created_at: string;
+  name?: string;
+  department?: string;
   user_name?: string;
   user_email?: string;
   user_role?: string;
-  department?: string;
+  user_department?: string;
+  user?: User;
   team_name?: string;
 }
 

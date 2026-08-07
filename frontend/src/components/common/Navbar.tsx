@@ -7,7 +7,7 @@ import { AuctionSettingsModal } from '../auction/AuctionSettingsModal';
 import { DEPARTMENTS } from '../../types';
 import { 
   Trophy, Shield, Users, Radio, PieChart, Heart, 
-  UserCheck, LogOut, Bell, ChevronDown, User, Edit3, X, Sparkles, CheckCircle, AlertTriangle, Info, Settings, Menu, Lock 
+  UserCheck, LogOut, Bell, ChevronDown, User, Edit3, X, Sparkles, CheckCircle, AlertTriangle, Info, Settings, Menu, Lock, Camera 
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -45,6 +45,14 @@ export const Navbar: React.FC = () => {
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Mandatory Photo & Department Update Enforcement for Existing Registered Users
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+  const [enforcePhotoFile, setEnforcePhotoFile] = useState<File | null>(null);
+  const [enforcePhotoPreview, setEnforcePhotoPreview] = useState<string | null>(null);
+  const [enforceDept, setEnforceDept] = useState('');
+  const [enforceError, setEnforceError] = useState<string | null>(null);
+  const [savingEnforce, setSavingEnforce] = useState(false);
+
   // Requirement 5: Company Logo state
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
 
@@ -77,10 +85,77 @@ export const Navbar: React.FC = () => {
     try {
       const res = await api.get('/players/me');
       if (res.data) {
-        if (res.data.image_path) setUserPhotoUrl(res.data.image_path);
+        const photo = res.data.image_path;
+        if (photo) setUserPhotoUrl(photo);
         setIsSubmitted(!!res.data.is_submitted);
+
+        // Check if photo is missing OR department is not in official DEPARTMENTS list
+        const validDept = !!user.department && DEPARTMENTS.includes(user.department);
+        if ((!photo || !validDept) && user.role !== 'admin') {
+          setIsProfileIncomplete(true);
+          setEnforceDept(validDept ? user.department : '');
+          if (photo) setEnforcePhotoPreview(getImageUrl(photo));
+        } else {
+          setIsProfileIncomplete(false);
+        }
+      } else if (user.role !== 'admin') {
+        const validDept = !!user.department && DEPARTMENTS.includes(user.department);
+        if (!validDept) {
+          setIsProfileIncomplete(true);
+          setEnforceDept('');
+        }
       }
     } catch (err) {}
+  };
+
+  const handleEnforcePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        setEnforceError('Image file size exceeds 5MB limit');
+        return;
+      }
+      setEnforcePhotoFile(file);
+      setEnforcePhotoPreview(URL.createObjectURL(file));
+      setEnforceError(null);
+    }
+  };
+
+  const handleEnforceProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!enforcePhotoFile && !enforcePhotoPreview) {
+      setEnforceError('📸 Player photo is mandatory! Please upload your profile photo.');
+      return;
+    }
+    if (!enforceDept || !DEPARTMENTS.includes(enforceDept)) {
+      setEnforceError('🏢 Please select a valid official corporate department.');
+      return;
+    }
+
+    setSavingEnforce(true);
+    setEnforceError(null);
+
+    try {
+      if (enforcePhotoFile) {
+        const formData = new FormData();
+        formData.append('file', enforcePhotoFile);
+        await api.post('/players/upload-photo', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+
+      await api.put('/players/profile/me', {
+        department: enforceDept
+      });
+
+      await fetchCurrentUser();
+      await loadUserProfile();
+      setIsProfileIncomplete(false);
+    } catch (err: any) {
+      setEnforceError(err.response?.data?.detail || 'Failed to update profile');
+    } finally {
+      setSavingEnforce(false);
+    }
   };
 
   const openProfileEdit = async () => {
@@ -652,6 +727,90 @@ export const Navbar: React.FC = () => {
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
       />
+
+      {/* MANDATORY PROFILE COMPLETION / PHOTO & DEPARTMENT ENFORCEMENT MODAL */}
+      {isProfileIncomplete && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-2xl flex items-center justify-center p-4 z-[999999] animate-fade-in">
+          <div className="bg-slate-900 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl shadow-amber-500/20 space-y-6 relative overflow-hidden text-left">
+            {/* Glow */}
+            <div className="absolute -top-12 -right-12 w-36 h-36 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header Badge */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shadow-inner flex-shrink-0">
+                <Camera className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white tracking-wide">Action Required: Profile Photo & Department</h3>
+                <p className="text-xs text-amber-400/90 font-medium">Mandatory profile updates for NPL Auction entry</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+              📢 <strong>Official NPL Requirement:</strong> All registered players must upload a clear profile picture and select their official corporate department from the updated dropdown list to participate in the upcoming cricket auction.
+            </p>
+
+            <form onSubmit={handleEnforceProfileSubmit} className="space-y-4">
+              {/* Photo Upload Section */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-amber-500/30 space-y-3">
+                <label className="block text-xs font-bold text-white">
+                  1. Profile Picture <span className="text-rose-400">* (Mandatory)</span>
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center flex-shrink-0">
+                    {enforcePhotoPreview ? (
+                      <img src={enforcePhotoPreview} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-7 h-7 text-slate-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleEnforcePhotoChange}
+                      className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-1">Upload a clear front-facing headshot (Max 5MB)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Department Select Dropdown */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-amber-500/30 space-y-2">
+                <label className="block text-xs font-bold text-white">
+                  2. Corporate Department <span className="text-rose-400">* (Mandatory)</span>
+                </label>
+                <select
+                  required
+                  value={enforceDept}
+                  onChange={(e) => setEnforceDept(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                >
+                  <option value="">Select Official Department...</option>
+                  {DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+
+              {enforceError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold">
+                  {enforceError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={savingEnforce}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-600/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {savingEnforce ? 'Updating Profile...' : 'Save & Continue to NPL Portal'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 };

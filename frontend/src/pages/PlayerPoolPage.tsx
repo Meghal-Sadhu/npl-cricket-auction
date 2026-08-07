@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { api, getImageUrl } from '../api/client';
 import { PlayerProfile, Team, DEPARTMENTS } from '../types';
 import { PlayerDetailModal } from '../components/players/PlayerDetailModal';
-import { Search, Filter, Heart, Plus, UserPlus, Shield, Award, CheckCircle, Check, X, Download, RotateCcw } from 'lucide-react';
+import { Search, Filter, Heart, Plus, UserPlus, Shield, Award, CheckCircle, Check, X, Download, RotateCcw, Building, ArrowUpDown } from 'lucide-react';
 
 export const PlayerPoolPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -12,10 +12,12 @@ export const PlayerPoolPage: React.FC = () => {
   const [wishlistIds, setWishlistIds] = useState<number[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   
-  // Filters State
+  // Filters & Sorting State
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [soldStatus, setSoldStatus] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'dept_asc' | 'category'>('name_asc');
   const [loading, setLoading] = useState(true);
 
   // Modals State
@@ -221,6 +223,35 @@ export const PlayerPoolPage: React.FC = () => {
     return `₹${val.toLocaleString()}`;
   };
 
+  const filteredAndSortedPlayers = players
+    .filter((p) => {
+      if (category && p.category !== category) return false;
+      const playerDept = p.user_department || p.department || p.user?.department || '';
+      if (departmentFilter && playerDept !== departmentFilter) return false;
+      if (soldStatus === 'sold' && !p.is_sold) return false;
+      if (soldStatus === 'unsold' && p.is_sold) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const pName = p.user_name || p.name || p.user?.name || '';
+        const pCat = p.category || '';
+        return pName.toLowerCase().includes(q) || playerDept.toLowerCase().includes(q) || pCat.toLowerCase().includes(q);
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const nameA = a.user_name || a.name || a.user?.name || '';
+      const nameB = b.user_name || b.name || b.user?.name || '';
+      if (sortBy === 'name_asc') return nameA.localeCompare(nameB);
+      if (sortBy === 'name_desc') return nameB.localeCompare(nameA);
+      if (sortBy === 'dept_asc') {
+        const deptA = a.user_department || a.department || a.user?.department || '';
+        const deptB = b.user_department || b.department || b.user?.department || '';
+        return deptA.localeCompare(deptB);
+      }
+      if (sortBy === 'category') return (a.category || '').localeCompare(b.category || '');
+      return nameA.localeCompare(nameB);
+    });
+
   return (
     <div className="space-y-6">
       
@@ -267,8 +298,8 @@ export const PlayerPoolPage: React.FC = () => {
           />
         </div>
 
-        {/* Category Pills & Sold Filters */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        {/* Category Pills & Department / Sold / Sort Filters */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
           {['', 'Batsman', 'Bowler', 'All Rounder', 'Wicket Keeper'].map((cat) => (
             <button
               key={cat}
@@ -283,15 +314,45 @@ export const PlayerPoolPage: React.FC = () => {
             </button>
           ))}
 
+          {/* Department Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <Building className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="bg-transparent text-xs text-white focus:outline-none cursor-pointer"
+            >
+              <option value="" className="bg-slate-900">All Departments</option>
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept} className="bg-slate-900">{dept}</option>
+              ))}
+            </select>
+          </div>
+
           <select
             value={soldStatus}
             onChange={(e) => setSoldStatus(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white font-semibold"
+            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white font-semibold cursor-pointer"
           >
             <option value="all">All Status</option>
             <option value="unsold">Available Pool</option>
             <option value="sold">Sold Roster</option>
           </select>
+
+          {/* Sort By */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-xs text-white focus:outline-none cursor-pointer"
+            >
+              <option value="name_asc" className="bg-slate-900">Sort: Name (A-Z)</option>
+              <option value="name_desc" className="bg-slate-900">Sort: Name (Z-A)</option>
+              <option value="dept_asc" className="bg-slate-900">Sort: Department (A-Z)</option>
+              <option value="category" className="bg-slate-900">Sort: Category</option>
+            </select>
+          </div>
         </div>
 
       </div>
@@ -299,13 +360,13 @@ export const PlayerPoolPage: React.FC = () => {
       {/* Player Cards Grid */}
       {loading ? (
         <div className="py-12 text-center text-xs text-slate-500">Loading player pool...</div>
-      ) : players.length === 0 ? (
+      ) : filteredAndSortedPlayers.length === 0 ? (
         <div className="glass-card rounded-3xl p-12 text-center text-xs text-slate-500 border border-slate-800">
           No players found matching current search criteria.
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {players.map((p) => (
+          {filteredAndSortedPlayers.map((p) => (
             <div key={p.id} className="glass-card rounded-3xl p-5 border border-slate-800 space-y-4 relative group hover:border-slate-700 transition-all flex flex-col justify-between">
               
               <div>

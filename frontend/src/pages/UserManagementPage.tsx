@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../api/client';
-import { User, UserRole } from '../types';
-import { Search, UserCheck, Shield, Trash2, CheckCircle, XCircle, AlertTriangle, X } from 'lucide-react';
+import { User, UserRole, DEPARTMENTS } from '../types';
+import { Search, UserCheck, Shield, Trash2, CheckCircle, XCircle, AlertTriangle, X, Building, ArrowUpDown } from 'lucide-react';
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'dept_asc' | 'role' | 'id_desc'>('name_asc');
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -33,6 +35,25 @@ export const UserManagementPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const filteredAndSortedUsers = users
+    .filter(u => {
+      if (roleFilter && u.role !== roleFilter) return false;
+      if (departmentFilter && u.department !== departmentFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.department && u.department.toLowerCase().includes(q));
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'dept_asc') return (a.department || '').localeCompare(b.department || '');
+      if (sortBy === 'role') return a.role.localeCompare(b.role);
+      if (sortBy === 'id_desc') return b.id - a.id;
+      return a.name.localeCompare(b.name);
+    });
 
   const handleRoleChange = async (userId: number, newRole: UserRole) => {
     try {
@@ -116,21 +137,56 @@ export const UserManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Role Filter Tabs */}
-      <div className="flex items-center gap-2">
-        {['', 'admin', 'captain', 'player'].map(role => (
-          <button
-            key={role}
-            onClick={() => setRoleFilter(role)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
-              roleFilter === role
-                ? 'bg-brand-600 text-white shadow-md'
-                : 'glass-card text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            {role === '' ? 'All Roles' : role}
-          </button>
-        ))}
+      {/* Role Filter Tabs & Sorting Controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {['', 'admin', 'captain', 'player'].map(role => (
+            <button
+              key={role}
+              onClick={() => setRoleFilter(role)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                roleFilter === role
+                  ? 'bg-brand-600 text-white shadow-md'
+                  : 'glass-card text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              {role === '' ? 'All Roles' : role}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Department Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1">
+            <Building className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="bg-transparent text-xs text-white focus:outline-none cursor-pointer"
+            >
+              <option value="" className="bg-slate-900">All Departments</option>
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept} className="bg-slate-900">{dept}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort By */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-xs text-white focus:outline-none cursor-pointer"
+            >
+              <option value="name_asc" className="bg-slate-900">Sort: Name (A-Z)</option>
+              <option value="name_desc" className="bg-slate-900">Sort: Name (Z-A)</option>
+              <option value="dept_asc" className="bg-slate-900">Sort: Department (A-Z)</option>
+              <option value="role" className="bg-slate-900">Sort: Role</option>
+              <option value="id_desc" className="bg-slate-900">Sort: Newest First</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Users Table */}
@@ -149,7 +205,7 @@ export const UserManagementPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {users.map((u) => (
+              {filteredAndSortedUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-900/50">
                   <td className="py-3 px-4">
                     <div className="font-bold text-white flex items-center gap-2">

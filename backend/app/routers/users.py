@@ -76,6 +76,30 @@ def delete_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Safe cascade cleanup of user relations before account deletion
+    from app.models.team import Team, TeamPlayer
+    from app.models.player import PlayerProfile
+    from app.models.auction import Bid, AuctionQueue
+    from app.models.notification import Notification
+
+    # 1. Unlink as captain from any team
+    teams = db.query(Team).filter(Team.captain_id == user_id).all()
+    for t in teams:
+        t.captain_id = None
+
+    # 2. Cleanup PlayerProfile and associated bids, team assignments, auction queue items
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user_id).first()
+    if profile:
+        db.query(TeamPlayer).filter(TeamPlayer.player_id == profile.id).delete(synchronize_session=False)
+        db.query(Bid).filter(Bid.player_id == profile.id).delete(synchronize_session=False)
+        db.query(AuctionQueue).filter(AuctionQueue.player_id == profile.id).delete(synchronize_session=False)
+        db.delete(profile)
+
+    # 3. Clean notifications
+    db.query(Notification).filter(Notification.user_id == user_id).delete(synchronize_session=False)
+
+    # 4. Delete user account
     db.delete(user)
     db.commit()
-    return {"message": "User deleted successfully"}
+    return {"message": f"User {user.name} deleted successfully"}

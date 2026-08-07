@@ -31,6 +31,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle 401 Unauthorized globally (e.g. expired admin session)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (localStorage.getItem('access_token')) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // WebSocket connection to auction backend
 export const createAuctionSocket = (token?: string): WebSocket => {
   const wsUrl = `${WS_URL}${token ? `?token=${encodeURIComponent(token)}` : ''}`;

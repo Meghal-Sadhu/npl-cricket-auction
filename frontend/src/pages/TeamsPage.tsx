@@ -28,6 +28,10 @@ export const TeamsPage: React.FC = () => {
   // Delete Team State (Request 2)
   const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<Team | null>(null);
 
+  // Screen-Centered Success & Error Notification Modal States
+  const [successModalMsg, setSuccessModalMsg] = useState<string | null>(null);
+  const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null);
+
   // Player Detail Modal State
   const [modalPlayer, setModalPlayer] = useState<PlayerProfile | null>(null);
 
@@ -72,9 +76,10 @@ export const TeamsPage: React.FC = () => {
     try {
       await api.post(`/auction/revoke-player/${revokeConfirmPlayer.id}`);
       setRevokeConfirmPlayer(null);
+      setSuccessModalMsg("🔄 Player revoked and returned to unsold pool.");
       fetchTeams();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to revoke player');
+      setErrorModalMsg(err.response?.data?.detail || 'Failed to revoke player');
     }
   };
 
@@ -108,14 +113,14 @@ export const TeamsPage: React.FC = () => {
         });
       }
 
-      alert('Franchise Team Created Successfully!');
       setShowModal(false);
       setNewTeamName('');
       setSelectedCaptainId('');
       setLogoFile(null);
+      setSuccessModalMsg("🎉 FRANCHISE TEAM CREATED SUCCESSFULLY!");
       fetchTeams();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to create team');
+      setErrorModalMsg(err.response?.data?.detail || 'Failed to create team');
     } finally {
       setIsCreatingTeam(false);
     }
@@ -141,9 +146,10 @@ export const TeamsPage: React.FC = () => {
       }
 
       setEditTeam(null);
+      setSuccessModalMsg("✏️ Franchise Team Updated Successfully!");
       fetchTeams();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to update team details');
+      setErrorModalMsg(err.response?.data?.detail || 'Failed to update team details');
     }
   };
 
@@ -152,9 +158,10 @@ export const TeamsPage: React.FC = () => {
     try {
       await api.delete(`/teams/${deleteConfirmTeam.id}`);
       setDeleteConfirmTeam(null);
+      setSuccessModalMsg("🗑️ Franchise Team Deleted Successfully.");
       fetchTeams();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to delete team');
+      setErrorModalMsg(err.response?.data?.detail || 'Failed to delete team');
     }
   };
 
@@ -167,7 +174,7 @@ export const TeamsPage: React.FC = () => {
       });
       fetchTeams();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to upload logo');
+      setErrorModalMsg(err.response?.data?.detail || 'Failed to upload logo');
     }
   };
 
@@ -555,6 +562,54 @@ export const TeamsPage: React.FC = () => {
         player={modalPlayer}
         onClose={() => setModalPlayer(null)}
       />
+
+      {/* Screen-Centered Glassmorphic Success Notification Modal */}
+      {successModalMsg && createPortal(
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4 z-[99999]">
+          <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-6 w-full max-w-sm shadow-2xl shadow-emerald-500/20 space-y-5 text-center relative overflow-hidden">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto shadow-inner">
+              <UserCheck className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-lg font-black text-white">{successModalMsg}</h3>
+              <p className="text-xs text-slate-400">Franchise team configuration updated cleanly.</p>
+            </div>
+
+            <button
+              onClick={() => setSuccessModalMsg(null)}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+            >
+              Great, Continue
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Screen-Centered Glassmorphic Error Notification Modal */}
+      {errorModalMsg && createPortal(
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4 z-[99999]">
+          <div className="bg-slate-900 border-2 border-rose-500/50 rounded-3xl p-6 w-full max-w-sm shadow-2xl shadow-rose-500/20 space-y-5 text-center relative overflow-hidden">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center mx-auto shadow-inner">
+              <X className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-lg font-black text-white">Action Error</h3>
+              <p className="text-xs text-rose-300 font-bold">{errorModalMsg}</p>
+            </div>
+
+            <button
+              onClick={() => setErrorModalMsg(null)}
+              className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

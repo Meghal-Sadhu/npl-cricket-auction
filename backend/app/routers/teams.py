@@ -267,8 +267,11 @@ async def delete_team(
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
 
+    from app.models.auction import Bid, AuctionQueue
+
     session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
 
+    # 1. Reset status of all players purchased by this team to unsold/queued
     assigned_players = db.query(TeamPlayer).filter(TeamPlayer.team_id == team_id).all()
     for tp in assigned_players:
         if tp.player:
@@ -279,7 +282,17 @@ async def delete_team(
                     AuctionQueue.player_id == tp.player_id
                 ).first()
                 if q_entry:
-                    q_entry.status = "unsold"
+                    q_entry.status = "queued"
+
+    # 2. Delete all TeamPlayer assignments for this team
+    db.query(TeamPlayer).filter(TeamPlayer.team_id == team_id).delete(synchronize_session=False)
+
+    # 3. Delete all Bids placed by this team (fixes NOT NULL constraint error on bids.team_id)
+    db.query(Bid).filter(Bid.team_id == team_id).delete(synchronize_session=False)
+
+    # 4. Clear current_team_id if active in current session
+    if session and session.current_team_id == team_id:
+        session.current_team_id = None
 
     db.delete(team)
     db.commit()

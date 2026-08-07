@@ -10,13 +10,15 @@ def get_base_price(db: Session) -> float:
     return float(setting.value) if setting and setting.value else DEFAULT_BASE_PRICE
 
 def get_target_squad_size(db: Session) -> int:
-    setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "min_squad_size").first()
+    setting = db.query(ApplicationSettings).filter(
+        ApplicationSettings.key.in_(["min_players", "min_squad_size"])
+    ).first()
     if setting and setting.value:
         try:
             return int(float(setting.value))
         except ValueError:
             pass
-    return 15
+    return 11
 
 def calculate_team_budget_metrics(team: Team, db: Session) -> dict:
     base_price = get_base_price(db)
@@ -29,17 +31,17 @@ def calculate_team_budget_metrics(team: Team, db: Session) -> dict:
     # Check if captain is assigned to team
     captain_assigned = 1 if team.captain_id else 0
     
-    # Total assigned players count
+    # Total assigned players count (Captain + Purchased Auction Players)
     total_assigned = len(team_players) + captain_assigned
     
-    # Slots remaining to reach target squad size
+    # Slots remaining to reach minimum target squad size
     remaining_slots = max(0, squad_target - total_assigned)
     
-    # Reserve base price for (remaining_slots - 1) players so team can afford remaining squad
-    reserved_slots = max(0, remaining_slots - 1)
-    reserved_budget = float(reserved_slots * base_price)
+    # Reserved budget = remaining_slots * base_price
+    # e.g., if target is 11, and captain is present (total_assigned = 1), 10 slots remain -> 10 * 5 Lakh = ₹50 Lakh reserved
+    reserved_budget = float(remaining_slots * base_price)
     
-    # Maximum spendable budget for the CURRENT active bid
+    # Maximum spendable budget for placing bids
     max_bid_limit = float(team.budget_total - actual_budget_used - reserved_budget)
     spendable_budget = max(0.0, max_bid_limit)
     

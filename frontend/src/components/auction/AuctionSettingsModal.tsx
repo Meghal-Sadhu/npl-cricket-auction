@@ -225,12 +225,36 @@ export const AuctionSettingsModal: React.FC<Props> = ({ isOpen, onClose, onSave 
               
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1">Registration Closing Date & Time</label>
-                <input
-                  type="datetime-local"
-                  value={settings.registration_closed_date || ''}
-                  onChange={(e) => setSettings({ ...settings, registration_closed_date: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="datetime-local"
+                    style={{ colorScheme: 'dark' }}
+                    value={settings.registration_closed_date ? settings.registration_closed_date.slice(0, 16) : ''}
+                    onChange={(e) => setSettings({ ...settings, registration_closed_date: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const today = new Date();
+                        const pad = (n: number) => String(n).padStart(2, '0');
+                        const formatted = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}T23:59`;
+                        setSettings({ ...settings, registration_closed_date: formatted });
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold border border-amber-500/30 cursor-pointer"
+                    >
+                      Today 11:59 PM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, registration_closed_date: '' })}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] font-bold border border-slate-700 cursor-pointer"
+                    >
+                      Clear Date
+                    </button>
+                  </div>
+                </div>
                 <span className="text-[10px] text-slate-400 block mt-1">
                   Registration form will automatically stop accepting responses after this date. Admin can still add players manually.
                 </span>

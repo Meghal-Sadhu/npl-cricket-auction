@@ -81,7 +81,10 @@ export const Navbar: React.FC = () => {
   }, [activeToast]);
 
   const loadUserProfile = async () => {
-    if (!user) return;
+    if (!user || location.pathname.startsWith('/register') || location.pathname.startsWith('/login') || user.role === 'admin') {
+      setIsProfileIncomplete(false);
+      if (!user) return;
+    }
     try {
       const res = await api.get('/players/me');
       if (res.data) {
@@ -89,10 +92,8 @@ export const Navbar: React.FC = () => {
         if (photo) setUserPhotoUrl(photo);
         setIsSubmitted(!!res.data.is_submitted);
 
-        // Check if photo is missing OR department is not in official DEPARTMENTS list
-        // Do NOT trigger popup on /register or /login route for first-time registration
         const validDept = !!user.department && DEPARTMENTS.includes(user.department);
-        const isOnRegisterPage = location.pathname === '/register' || location.pathname === '/login';
+        const isOnRegisterPage = location.pathname.startsWith('/register') || location.pathname.startsWith('/login');
         if ((!photo || !validDept) && user.role !== 'admin' && !isOnRegisterPage) {
           setIsProfileIncomplete(true);
           setEnforceDept(validDept ? user.department : '');

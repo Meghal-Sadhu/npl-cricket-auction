@@ -71,6 +71,13 @@ export const PlayerRegisterPage: React.FC = () => {
       return;
     }
 
+    // MANDATORY 10-DIGIT MOBILE NUMBER CHECK
+    const cleanMobile = (formData.mobile || '').replace(/[^0-9]/g, '');
+    if (cleanMobile.length !== 10) {
+      setError('📱 Mobile number must be exactly 10 numeric digits (e.g. 9876543210).');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -172,14 +179,20 @@ export const PlayerRegisterPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Mobile Number</label>
+              <label className="block text-xs font-bold text-slate-300 mb-1">
+                Mobile Number <span className="text-amber-400 font-normal">(10 Digits)</span>
+              </label>
               <input
-                type="text"
+                type="tel"
+                maxLength={10}
                 required
                 value={formData.mobile}
-                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                onChange={(e) => {
+                  const digitsOnly = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                  setFormData({ ...formData, mobile: digitsOnly });
+                }}
                 placeholder="9876543210"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 font-mono"
               />
             </div>
 

@@ -153,10 +153,10 @@ export const AuctionRoomPage: React.FC = () => {
   const activeSoldInfo = soldOverlay || auctionState?.last_sold_info;
   const currentIntermissionSeconds = intermissionTime ?? auctionState?.intermission_seconds ?? timerSeconds;
 
-  // Timer Calculation
+  // Timer Calculation (Radius = 74, Circumference = 465)
   const currentMax = Math.max(maxTimerDuration, timerSeconds);
   const timerPercentage = Math.min(100, Math.max(0, (timerSeconds / currentMax) * 100));
-  const strokeDashoffset = 377 - (377 * timerPercentage) / 100;
+  const strokeDashoffset = 465 - (465 * timerPercentage) / 100;
 
   return (
     <div className="space-y-6 pb-12 relative">
@@ -514,37 +514,37 @@ export const AuctionRoomPage: React.FC = () => {
           <div className="glass-card rounded-3xl p-6 border border-slate-800 text-center space-y-6">
             
             {/* Circular Timer Ring */}
-            <div className="relative w-36 h-36 mx-auto flex items-center justify-center">
+            <div className="relative w-44 h-44 mx-auto flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90">
                 <circle
-                  cx="72"
-                  cy="72"
-                  r="60"
+                  cx="88"
+                  cy="88"
+                  r="74"
                   stroke="currentColor"
                   strokeWidth="8"
                   className="text-slate-900"
                   fill="transparent"
                 />
                 <circle
-                  cx="72"
-                  cy="72"
-                  r="60"
+                  cx="88"
+                  cy="88"
+                  r="74"
                   stroke="currentColor"
                   strokeWidth="8"
                   className={`transition-all duration-1000 ${
                     timerSeconds <= 5 ? 'text-rose-500' : timerSeconds <= 10 ? 'text-gold-400' : 'text-brand-500'
                   }`}
                   fill="transparent"
-                  strokeDasharray="377"
+                  strokeDasharray="465"
                   strokeDashoffset={strokeDashoffset}
                   strokeLinecap="round"
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-3xl font-black ${timerSeconds <= 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center">
+                <span className={`text-4xl font-black font-mono tracking-tight ${timerSeconds <= 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
                   {timerSeconds}s
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase">Hammer Countdown</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hammer Countdown</span>
               </div>
             </div>
 

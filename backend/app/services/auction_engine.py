@@ -23,15 +23,15 @@ class AuctionEngine:
         self.last_sold_info: Optional[Dict[str, Any]] = None
 
     def sync_auction_queue(self, db: Session, session_id: int):
-        # 1. Identify all exempt User IDs (Captains and Admins)
+        # 1. Identify all exempt User IDs (Only Captains are exempt; Admins and Players enter auction pool!)
         exempt_user_ids = set()
         for t in db.query(Team).all():
             if t.captain_id:
                 exempt_user_ids.add(t.captain_id)
-        for u in db.query(User).filter(User.role.in_(["captain", "admin"])).all():
+        for u in db.query(User).filter(User.role == "captain").all():
             exempt_user_ids.add(u.id)
 
-        # 2. Remove any exempt users from the queue if present
+        # 2. Remove any captain exempt users from the queue if present
         if exempt_user_ids:
             exempt_profiles = db.query(PlayerProfile).filter(PlayerProfile.user_id.in_(exempt_user_ids)).all()
             exempt_profile_ids = [p.id for p in exempt_profiles]
@@ -42,16 +42,18 @@ class AuctionEngine:
                 ).delete(synchronize_session=False)
                 db.commit()
 
-        # 3. Ensure all users with role 'player' have a PlayerProfile record
+        # 3. Ensure all users with role 'player' or 'admin' have a PlayerProfile record
         existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all())
         players_without_profile = db.query(User).filter(
-            User.role == "player",
+            User.role.in_(["player", "admin"]),
             ~User.id.in_(existing_profile_user_ids) if existing_profile_user_ids else True
         ).all()
         for p_user in players_without_profile:
             db.add(PlayerProfile(
                 user_id=p_user.id,
                 category="Batsman",
+                batting_style="Right Hand",
+                bowling_style="Regular Bowler",
                 base_price=500000.0,
                 is_sold=False,
                 is_submitted=False
@@ -109,13 +111,13 @@ class AuctionEngine:
                 current_player = {
                     "id": player.id,
                     "name": player.user.name if player.user else "Unknown Player",
-                    "employee_id": player.employee_id,
-                    "department": player.user.department if player.user else "",
-                    "category": player.category,
-                    "batting_style": player.batting_style,
-                    "bowling_style": player.bowling_style,
-                    "experience_level": player.experience_level,
-                    "base_price": player.base_price,
+                    "employee_id": player.employee_id or f"EMP-{player.id:03d}",
+                    "department": player.user.department if player.user else "General",
+                    "category": player.category or "Batsman",
+                    "batting_style": player.batting_style or "Right Hand",
+                    "bowling_style": player.bowling_style or "Regular Bowler",
+                    "experience_level": player.experience_level or "Intermediate",
+                    "base_price": player.base_price or 500000.0,
                     "image_path": player.image_path,
                     "bio": player.bio,
                     "achievements": player.achievements

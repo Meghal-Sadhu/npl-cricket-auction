@@ -489,6 +489,12 @@ async def update_settings(
         else:
             rec.value = str(value)
 
+    if "timer_seconds" in settings_in.settings:
+        try:
+            auction_engine.timer_seconds = int(settings_in.settings["timer_seconds"])
+        except Exception:
+            pass
+
     db.add(Notification(message="⚙️ Auction Rules Updated by Admin", type="info"))
     db.commit()
     await auction_engine.broadcast_state("SETTINGS_UPDATED")

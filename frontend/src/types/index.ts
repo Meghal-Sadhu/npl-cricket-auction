@@ -138,6 +138,8 @@ export interface ApplicationSettings {
   max_players: number;
   min_squad_size?: number;
   timer_reset_on_bid: boolean;
+  registration_closed_date?: string;
+  registration_closed?: boolean;
 }
 
 export interface NotificationItem {

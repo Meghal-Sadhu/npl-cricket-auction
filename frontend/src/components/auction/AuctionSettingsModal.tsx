@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { ApplicationSettings } from '../../types';
-import { Settings, X, Save, Clock, DollarSign, Users, Shield, Lock, Upload } from 'lucide-react';
+import { Settings, X, Save, Clock, DollarSign, Users, Shield, Lock, Upload, Calendar } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -58,7 +58,9 @@ export const AuctionSettingsModal: React.FC<Props> = ({ isOpen, onClose, onSave 
           min_players: settings.min_players,
           max_players: settings.max_players,
           min_squad_size: settings.min_squad_size || settings.min_players || 15,
-          timer_reset_on_bid: settings.timer_reset_on_bid
+          timer_reset_on_bid: settings.timer_reset_on_bid,
+          registration_closed_date: settings.registration_closed_date || '',
+          registration_closed: !!settings.registration_closed
         }
       });
 
@@ -213,6 +215,39 @@ export const AuctionSettingsModal: React.FC<Props> = ({ isOpen, onClose, onSave 
                 onChange={(e) => setSettings({ ...settings, timer_reset_on_bid: e.target.checked })}
                 className="w-4 h-4 rounded border-slate-800 text-brand-600 focus:ring-0 cursor-pointer"
               />
+            </div>
+
+            {/* Requirement 6: Registration Closing Controls */}
+            <div className="p-3 bg-slate-900/90 rounded-2xl border border-amber-500/30 space-y-3">
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" /> Player Registration Control & Deadline
+              </span>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Registration Closing Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={settings.registration_closed_date || ''}
+                  onChange={(e) => setSettings({ ...settings, registration_closed_date: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  Registration form will automatically stop accepting responses after this date. Admin can still add players manually.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                <div>
+                  <span className="text-xs font-bold text-white block">Immediately Close Player Registration</span>
+                  <span className="text-[10px] text-slate-400">Manually stop accepting new player registrations right now</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={!!settings.registration_closed}
+                  onChange={(e) => setSettings({ ...settings, registration_closed: e.target.checked })}
+                  className="w-4 h-4 rounded border-slate-800 text-amber-500 focus:ring-0 cursor-pointer"
+                />
+              </div>
             </div>
 
             <button

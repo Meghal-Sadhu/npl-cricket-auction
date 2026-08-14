@@ -45,6 +45,28 @@ from app.models.player import PlayerProfile
 
 @router.post("/register", response_model=Token)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
+    # Check Registration Deadline & Registration Closed status
+    from app.models.settings import ApplicationSettings
+    from datetime import datetime
+
+    reg_closed_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "registration_closed").first()
+    reg_date_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "registration_closed_date").first()
+
+    is_closed = reg_closed_setting and reg_closed_setting.value.lower() == "true"
+    if not is_closed and reg_date_setting and reg_date_setting.value:
+        try:
+            deadline = datetime.fromisoformat(reg_date_setting.value)
+            if datetime.now() > deadline:
+                is_closed = True
+        except Exception:
+            pass
+
+    if is_closed:
+        raise HTTPException(
+            status_code=400,
+            detail="🔒 Player registration is currently closed by the Admin."
+        )
+
     clean_email = user_in.email.strip().lower()
 
     # Enforce corporate domain restriction

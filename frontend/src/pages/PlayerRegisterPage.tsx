@@ -52,8 +52,8 @@ export const PlayerRegisterPage: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image file size exceeds 5MB limit');
+      if (file.size > 25 * 1024 * 1024) {
+        setError('Image file size exceeds 25MB limit');
         return;
       }
       setImageFile(file);
@@ -126,16 +126,16 @@ export const PlayerRegisterPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-bold text-white mb-1">
-                Player Photo (JPG, PNG, WEBP) <span className="text-rose-400 font-extrabold text-xs ml-1">* (Mandatory)</span>
+                Player Photo <span className="text-rose-400 font-extrabold text-xs ml-1">* (Mandatory)</span>
               </label>
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
                 onChange={handleImageChange}
                 className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer"
               />
               <span className="text-[10px] text-amber-400/90 font-medium block mt-1">
-                ⚠️ Uploading your clear profile picture is required to register for the NPL auction. (Max size: 5 MB)
+                ⚠️ Uploading your clear profile picture is required to register for the NPL auction. (Max size: 25 MB)
               </span>
             </div>
           </div>

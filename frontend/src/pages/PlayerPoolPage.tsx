@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { api, getImageUrl } from '../api/client';
 import { PlayerProfile, Team, DEPARTMENTS } from '../types';
 import { PlayerDetailModal } from '../components/players/PlayerDetailModal';
-import { Search, Filter, Heart, Plus, UserPlus, Shield, Award, CheckCircle, Check, X, Download, RotateCcw, Building, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, Heart, Plus, UserPlus, Shield, Award, CheckCircle, Check, X, Download, RotateCcw, Building, ArrowUpDown, Trash2 } from 'lucide-react';
 
 export const PlayerPoolPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -31,6 +31,20 @@ export const PlayerPoolPage: React.FC = () => {
 
   // Custom Glassmorphic Revoke Confirmation Modal State
   const [revokeConfirmPlayer, setRevokeConfirmPlayer] = useState<{ id: number; name: string } | null>(null);
+
+  // Custom Glassmorphic Delete Profile Confirmation Modal State
+  const [deleteConfirmPlayer, setDeleteConfirmPlayer] = useState<{ id: number; name: string } | null>(null);
+
+  const executeDeletePlayer = async () => {
+    if (!deleteConfirmPlayer) return;
+    try {
+      await api.delete(`/players/${deleteConfirmPlayer.id}`);
+      setDeleteConfirmPlayer(null);
+      fetchPlayers();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to delete player profile');
+    }
+  };
 
   // Requirement 5: Shopfloor Employee state toggle & Photo Upload
   const [isShopfloor, setIsShopfloor] = useState(false);
@@ -482,9 +496,19 @@ export const PlayerPoolPage: React.FC = () => {
                 {user?.role === 'admin' && p.is_sold && (
                   <button
                     onClick={() => setRevokeConfirmPlayer({ id: p.id, name: p.user_name || 'Player' })}
-                    className="w-full py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs flex items-center justify-center gap-1 border border-amber-500/30 transition-colors"
+                    className="w-full py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs flex items-center justify-center gap-1 border border-amber-500/30 transition-colors cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" /> Revoke & Return to Pool
+                  </button>
+                )}
+
+                {/* Admin Delete Player Profile Button */}
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => setDeleteConfirmPlayer({ id: p.id, name: p.user_name || p.name || 'Player' })}
+                    className="w-full py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-xs flex items-center justify-center gap-1 border border-rose-500/30 transition-colors cursor-pointer mt-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Player Profile
                   </button>
                 )}
               </div>
@@ -840,6 +864,45 @@ export const PlayerPoolPage: React.FC = () => {
                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-600/30 transition-all cursor-pointer"
               >
                 Yes, Revoke Player
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Screen-Centered Glassmorphic Delete Player Confirmation Modal */}
+      {deleteConfirmPlayer && createPortal(
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4 z-[99999]">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 w-full max-w-md shadow-2xl shadow-rose-500/10 space-y-5 text-center relative overflow-hidden">
+            {/* Ambient Glow */}
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Icon Badge */}
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center mx-auto shadow-inner">
+              <Trash2 className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-white tracking-wide">Delete Player Profile?</h3>
+              <p className="text-xs text-slate-300 leading-relaxed px-2">
+                Are you sure you want to delete <span className="text-rose-400 font-extrabold underline decoration-rose-500/50 underline-offset-4">{deleteConfirmPlayer.name}</span>? This will permanently erase their player profile, user account, bids, and team assignments.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setDeleteConfirmPlayer(null)}
+                className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={executeDeletePlayer}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-extrabold text-xs shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+              >
+                Yes, Delete Profile
               </button>
             </div>
           </div>

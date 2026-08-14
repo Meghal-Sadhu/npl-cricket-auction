@@ -56,10 +56,10 @@ def list_players(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    # Ensure all users with role 'player' have a PlayerProfile record so they appear in pool
+    # Ensure all users with role 'player' or 'admin' have a PlayerProfile record so they can appear in pool
     existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all())
     users_without_profile = db.query(User).filter(
-        User.role == "player",
+        User.role.in_(["player", "admin"]),
         ~User.id.in_(existing_profile_user_ids) if existing_profile_user_ids else True
     ).all()
     for u in users_without_profile:
@@ -246,16 +246,19 @@ async def upload_player_photo(
         db.commit()
         db.refresh(profile)
 
-    if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-        raise HTTPException(status_code=400, detail="Only JPG, PNG, and WEBP images are allowed")
+    # Support all image formats (JPG, PNG, WEBP, HEIC, BMP, GIF, SVG, etc.)
+    content_type = (file.content_type or "").lower()
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if not content_type.startswith("image/") and ext not in [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".bmp", ".gif", ".tiff", ".svg"]:
+        raise HTTPException(status_code=400, detail="Uploaded file must be a valid image format.")
 
     contents = await file.read()
-    if len(contents) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Image size exceeds 5 MB maximum limit")
+    if len(contents) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image size exceeds 25 MB maximum limit")
 
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    clean_ext = ext.replace(".", "") if ext else "jpg"
     target_id = profile.id if profile else current_user.id
-    filename = f"player_{target_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    filename = f"player_{target_id}_{uuid.uuid4().hex[:8]}.{clean_ext}"
     file_path = os.path.join(UPLOAD_FOLDER, filename)
 
     with open(file_path, "wb") as f:
@@ -301,6 +304,19 @@ def admin_delete_player_profile(
     profile = db.query(PlayerProfile).filter(PlayerProfile.id == player_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Player not found")
+
+    from app.models.team import TeamPlayer
+    from app.models.auction import Bid, AuctionQueue
+
+    # 1. Safe cascade cleanup before deleting player profile
+    db.query(TeamPlayer).filter(TeamPlayer.player_id == player_id).delete(synchronize_session=False)
+    db.query(Bid).filter(Bid.player_id == player_id).delete(synchronize_session=False)
+    db.query(AuctionQueue).filter(AuctionQueue.player_id == player_id).delete(synchronize_session=False)
+
+    user = profile.user
     db.delete(profile)
+    if user and user.role == "player":
+        db.delete(user)
+
     db.commit()
-    return {"message": "Player deleted successfully"}
+    return {"message": "Player profile deleted successfully"}

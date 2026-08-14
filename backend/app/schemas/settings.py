@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 class SettingsUpdate(BaseModel):
     settings: Dict[str, Any]
@@ -13,3 +13,5 @@ class SettingsOut(BaseModel):
     max_players: int = 18
     min_squad_size: int = 15
     timer_reset_on_bid: bool = True
+    registration_closed_date: Optional[str] = None
+    registration_closed: bool = False

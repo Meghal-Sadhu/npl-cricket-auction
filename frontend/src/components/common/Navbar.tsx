@@ -62,7 +62,7 @@ export const Navbar: React.FC = () => {
     }
     loadUserProfile();
     fetchCompanyLogo();
-  }, [user?.id]);
+  }, [user?.id, location.pathname]);
 
   const fetchCompanyLogo = async () => {
     try {
@@ -90,19 +90,15 @@ export const Navbar: React.FC = () => {
         setIsSubmitted(!!res.data.is_submitted);
 
         // Check if photo is missing OR department is not in official DEPARTMENTS list
+        // Do NOT trigger popup on /register or /login route for first-time registration
         const validDept = !!user.department && DEPARTMENTS.includes(user.department);
-        if ((!photo || !validDept) && user.role !== 'admin') {
+        const isOnRegisterPage = location.pathname === '/register' || location.pathname === '/login';
+        if ((!photo || !validDept) && user.role !== 'admin' && !isOnRegisterPage) {
           setIsProfileIncomplete(true);
           setEnforceDept(validDept ? user.department : '');
           if (photo) setEnforcePhotoPreview(getImageUrl(photo));
         } else {
           setIsProfileIncomplete(false);
-        }
-      } else if (user.role !== 'admin') {
-        const validDept = !!user.department && DEPARTMENTS.includes(user.department);
-        if (!validDept) {
-          setIsProfileIncomplete(true);
-          setEnforceDept('');
         }
       }
     } catch (err) {}
@@ -111,8 +107,8 @@ export const Navbar: React.FC = () => {
   const handleEnforcePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        setEnforceError('Image file size exceeds 5MB limit');
+      if (file.size > 25 * 1024 * 1024) {
+        setEnforceError('Image file size exceeds 25MB limit');
         return;
       }
       setEnforcePhotoFile(file);
@@ -703,7 +699,7 @@ export const Navbar: React.FC = () => {
                   <label className="block text-xs font-bold text-slate-300 mb-1">Avatar / Player Photo Upload</label>
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     onChange={(e) => e.target.files && setEditPhotoFile(e.target.files[0])}
                     className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white cursor-pointer"
                   />
@@ -767,11 +763,11 @@ export const Navbar: React.FC = () => {
                   <div className="flex-1">
                     <input
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept="image/*"
                       onChange={handleEnforcePhotoChange}
                       className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer"
                     />
-                    <span className="text-[10px] text-slate-400 block mt-1">Upload a clear front-facing headshot (Max 5MB)</span>
+                    <span className="text-[10px] text-slate-400 block mt-1">Upload a clear front-facing headshot (Max 25MB)</span>
                   </div>
                 </div>
               </div>

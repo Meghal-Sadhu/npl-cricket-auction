@@ -312,9 +312,12 @@ async def select_player_for_auction(
     db.query(Bid).filter(Bid.session_id == session.id, Bid.player_id == player_id).delete()
     db.commit()
 
-    timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()
-    timer_len = int(timer_setting.value) if timer_setting else 30
-    await auction_engine.start_timer(timer_len)
+    # Only start/reset timer if the auction session is actively live!
+    if session.status == "live":
+        timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()
+        timer_len = int(timer_setting.value) if timer_setting else 30
+        await auction_engine.start_timer(timer_len)
+
     await auction_engine.broadcast_state("PLAYER_SELECTED")
     return {"message": f"Player {player.user.name} put on auction hammer"}
 
@@ -464,7 +467,9 @@ def get_settings(db: Session = Depends(get_db)):
         min_players=int(setting_map.get("min_squad_size", 15)),
         max_players=int(setting_map.get("max_squad_size", 18)),
         min_squad_size=int(setting_map.get("min_squad_size", 15)),
-        timer_reset_on_bid=setting_map.get("timer_reset_on_bid", "true").lower() == "true"
+        timer_reset_on_bid=setting_map.get("timer_reset_on_bid", "true").lower() == "true",
+        registration_closed_date=setting_map.get("registration_closed_date", None),
+        registration_closed=setting_map.get("registration_closed", "false").lower() == "true"
     )
 
 @router.put("/settings", response_model=SettingsOut)

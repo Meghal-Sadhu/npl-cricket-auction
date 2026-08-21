@@ -117,6 +117,23 @@ export const PlayerPoolPage: React.FC = () => {
     }
   };
 
+  const handleExportPlayerPool = async () => {
+    try {
+      const response = await api.get('/analytics/export-player-pool-csv', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'npl_player_pool_analysis.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      alert('Failed to download Player Pool Analysis CSV');
+    }
+  };
+
   const handleExportJerseySpecs = async () => {
     try {
       const response = await api.get('/analytics/export-jersey-specs-csv', {
@@ -273,24 +290,35 @@ export const PlayerPoolPage: React.FC = () => {
           <p className="text-xs text-slate-400">Browse corporate players, filter categories, bookmark to wishlist, and view player cards</p>
         </div>
 
-        {user?.role === 'admin' && (
-          <div className="flex items-center gap-3">
-            {/* Requirement 6: Export Jersey Specs CSV Download */}
+        <div className="flex flex-wrap items-center gap-3">
+          {(user?.role === 'admin' || user?.role === 'captain') && (
             <button
-              onClick={handleExportJerseySpecs}
-              className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-brand-400 font-bold text-xs flex items-center gap-2 border border-slate-800 transition-colors"
+              onClick={handleExportPlayerPool}
+              className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-gold-400 font-bold text-xs flex items-center gap-2 border border-slate-800 transition-colors cursor-pointer shadow-md"
+              title="Download Full Player Pool Analysis CSV (Without Images)"
             >
-              <Download className="w-4 h-4" /> Export Jersey Specs CSV
+              <Download className="w-4 h-4 text-gold-400" /> Export Player Pool CSV
             </button>
+          )}
 
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-brand-500/25"
-            >
-              <UserPlus className="w-4 h-4" /> Add Player to Pool
-            </button>
-          </div>
-        )}
+          {user?.role === 'admin' && (
+            <>
+              <button
+                onClick={handleExportJerseySpecs}
+                className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-brand-400 font-bold text-xs flex items-center gap-2 border border-slate-800 transition-colors cursor-pointer shadow-md"
+              >
+                <Download className="w-4 h-4" /> Export Jersey Specs CSV
+              </button>
+
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-brand-500/25 cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" /> Add Player to Pool
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Filter Controls Bar */}

@@ -166,3 +166,54 @@ def export_jersey_specs_csv(
         'Content-Disposition': 'attachment; filename=npl_jersey_specifications.csv'
     }
     return StreamingResponse(output, media_type="text/csv", headers=headers)
+
+@router.get("/export-player-pool-csv")
+def export_player_pool_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["admin", "captain"]))
+):
+    players = db.query(PlayerProfile).join(User).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header (Excludes player image as requested)
+    writer.writerow([
+        "Player ID", "Full Name", "Department", "Employee ID", 
+        "Category", "Batting Style", "Bowling Style", "Experience Level", 
+        "Base Price (INR)", "Age", "Mobile Number", "Jersey Name", 
+        "Jersey Number", "T-Shirt Size", "Bio", "Achievements", 
+        "Status", "Franchise Team", "Acquisition Price (INR)"
+    ])
+
+    for p in players:
+        team_name = p.team_player.team.name if (p.team_player and p.team_player.team) else "Unassigned"
+        price = p.team_player.purchase_price if p.team_player else 0.0
+        status = "Sold" if p.is_sold else "Available"
+        writer.writerow([
+            p.id,
+            p.user.name if p.user else "",
+            p.user.department if p.user else "",
+            p.employee_id or "",
+            p.category or "Batsman",
+            p.batting_style or "Right Hand",
+            p.bowling_style or "Regular Bowler",
+            p.experience_level or "Intermediate",
+            f"{p.base_price:.2f}",
+            p.age or "",
+            p.mobile or "",
+            p.jersey_name or "",
+            p.jersey_number or "",
+            p.tshirt_size or "",
+            p.bio or "",
+            p.achievements or "",
+            status,
+            team_name,
+            f"{price:.2f}"
+        ])
+
+    output.seek(0)
+    headers = {
+        'Content-Disposition': 'attachment; filename=npl_player_pool_analysis.csv'
+    }
+    return StreamingResponse(output, media_type="text/csv", headers=headers)

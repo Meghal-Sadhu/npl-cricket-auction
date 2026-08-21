@@ -137,23 +137,32 @@ class AuctionEngine:
                         "logo_path": last_bid.team.logo_path
                     }
 
-        # Fetch recent bids
+        # Fetch recent bids with Captain Name and Increment Amount
         recent_bids = []
-        if session.current_player_id:
+        if session.current_player_id and current_player:
             bids_list = db.query(Bid).filter(
                 Bid.session_id == session.id,
                 Bid.player_id == session.current_player_id
-            ).order_by(Bid.created_at.desc()).limit(15).all()
+            ).order_by(Bid.created_at.asc()).all()
 
+            prev_amount = current_player["base_price"]
+            temp_bids = []
             for b in bids_list:
-                recent_bids.append({
+                inc = max(0.0, b.amount - prev_amount)
+                capt_name = b.team.captain.name if b.team and b.team.captain else "Captain"
+                temp_bids.append({
                     "id": b.id,
                     "team_id": b.team_id,
                     "team_name": b.team.name,
                     "team_logo": b.team.logo_path,
+                    "captain_name": capt_name,
                     "amount": b.amount,
+                    "increment": inc,
                     "created_at": b.created_at.isoformat()
                 })
+                prev_amount = b.amount
+
+            recent_bids = list(reversed(temp_bids))[:15]
 
         # Fetch Queue
         queue_items = []

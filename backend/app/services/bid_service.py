@@ -63,9 +63,7 @@ def validate_bid(team: Team, bid_amount: float, current_price: float, session: A
     if not valid:
         return False, f"Invalid bid increment. Allowed increments for current price are: {', '.join([f'₹{inc:,.0f}' for inc in allowed_increments])}"
             
-    if bid_amount > (metrics["budget_used"] + metrics["spendable_budget"]):
-        # Check if bid amount exceeds team spendable budget
-        if bid_amount > metrics["spendable_budget"]:
-            return False, f"Bid of ₹{bid_amount:,.0f} exceeds maximum spendable budget (₹{metrics['spendable_budget']:,.0f}) after reserving base price for remaining slots."
+    if bid_amount > metrics["spendable_budget"]:
+        return False, f"Bid of ₹{bid_amount:,.0f} exceeds team's maximum spendable budget of ₹{metrics['spendable_budget']:,.0f} (after reserving base price for remaining squad slots)."
 
     return True, "Bid valid"

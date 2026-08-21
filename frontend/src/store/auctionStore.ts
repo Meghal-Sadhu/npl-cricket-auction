@@ -32,8 +32,18 @@ export const useAuctionStore = create<AuctionStore>((set, get) => ({
 
     const ws = createAuctionSocket(token);
 
+    let pingInterval: any = null;
+
     ws.onopen = () => {
       set({ isConnected: true, socket: ws });
+      // 15s PING keep-alive heartbeat to prevent disconnection
+      pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ action: 'PING' }));
+        } else {
+          clearInterval(pingInterval);
+        }
+      }, 15000);
     };
 
     ws.onmessage = (event) => {
@@ -77,11 +87,20 @@ export const useAuctionStore = create<AuctionStore>((set, get) => ({
     };
 
     ws.onclose = () => {
+      if (pingInterval) clearInterval(pingInterval);
       set({ isConnected: false, socket: null });
+      // Auto-reconnect after 2 seconds seamlessly
+      setTimeout(() => {
+        const storedToken = localStorage.getItem('token');
+        if (storedToken) {
+          get().initWebSocket(storedToken);
+        }
+      }, 2000);
     };
 
     ws.onerror = (err) => {
       console.error('WebSocket connection error:', err);
+      if (pingInterval) clearInterval(pingInterval);
       set({ isConnected: false });
     };
   },
@@ -97,7 +116,12 @@ export const useAuctionStore = create<AuctionStore>((set, get) => ({
   placeBid: (amount: number, teamId?: number) => {
     const ws = get().socket;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      set({ bidError: 'Real-time WebSocket connection is not active.' });
+      // Auto reconnect if socket is closed/closing
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        get().initWebSocket(storedToken);
+      }
+      set({ bidError: 'Re-connecting to auction live server... Please try again in 1 second.' });
       return;
     }
     set({ bidError: null });

@@ -415,6 +415,62 @@ export const AuctionRoomPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Captain's Team Purse Bar & Global Player Pool Stats Badge */}
+      {(() => {
+        const myTeam = auctionState?.teams?.find(t => t.captain_id === user?.id);
+        const queue = auctionState?.queue || [];
+        const totalPool = queue.length;
+        const queuedCount = queue.filter(q => q.status === 'queued' || q.status === 'current').length;
+        const soldCount = queue.filter(q => q.status === 'sold' || q.is_sold).length;
+        const unsoldCount = queue.filter(q => q.status === 'unsold').length;
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {myTeam && (
+              <div className="glass-card rounded-2xl p-4 border border-brand-500/30 bg-gradient-to-r from-slate-900/90 via-brand-950/40 to-slate-900/90 flex items-center justify-between shadow-xl">
+                <div className="flex items-center gap-3">
+                  {myTeam.logo_path ? (
+                    <img src={myTeam.logo_path} alt={myTeam.name} className="w-10 h-10 rounded-xl object-cover border border-slate-700" />
+                  ) : (
+                    <Shield className="w-10 h-10 text-brand-400 p-2 bg-brand-500/10 rounded-xl border border-brand-500/20" />
+                  )}
+                  <div>
+                    <span className="text-[10px] text-brand-400 font-extrabold uppercase tracking-wider block">Your Team Purse ({myTeam.name})</span>
+                    <p className="text-lg font-black text-white font-mono tracking-tight">
+                      Spendable: <span className="text-emerald-400">{formatPrice(myTeam.spendable_budget)}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right text-xs font-bold space-y-0.5">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Spent: <span className="text-gold-400 font-mono">{formatPrice(myTeam.budget_used)}</span></span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Squad: <span className="text-white font-mono">{myTeam.players_count ?? myTeam.total_assigned_players ?? 0}/15</span></span>
+                </div>
+              </div>
+            )}
+
+            {/* Global Player Pool Counter Card */}
+            <div className={`glass-card rounded-2xl p-4 border border-slate-800 bg-slate-900/80 flex items-center justify-between shadow-xl ${!myTeam ? 'md:col-span-2' : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Total Player Pool</span>
+                  <p className="text-xl font-black text-white font-mono">{totalPool} Players Registered</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-[10px] font-extrabold">
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Queued: {queuedCount}</span>
+                <span className="px-2.5 py-1 rounded-lg bg-gold-500/10 text-gold-400 border border-gold-500/20">Sold: {soldCount}</span>
+                <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">Unsold: {unsoldCount}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 15-Second Post-Sale Intermission Break Countdown Banner */}
       {isIntermission && (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-gold-500/20 via-amber-500/20 to-gold-500/20 border-2 border-gold-400/50 text-gold-300 text-sm font-black flex items-center justify-between shadow-2xl animate-pulse">
@@ -429,13 +485,13 @@ export const AuctionRoomPage: React.FC = () => {
         </div>
       )}
 
-      {/* Error Alert Toast */}
-      {bidErrorLocal && (
+      {/* Error Alert Toast (Hidden during normal cooldown period) */}
+      {bidErrorLocal && !bidErrorLocal.toLowerCase().includes('cooldown') && (
         <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" /> {bidErrorLocal}
           </div>
-          <button onClick={() => setBidErrorLocal(null)} className="text-rose-400 hover:text-white">
+          <button onClick={() => setBidErrorLocal(null)} className="text-rose-400 hover:text-white cursor-pointer">
             Dismiss
           </button>
         </div>
@@ -807,20 +863,39 @@ export const AuctionRoomPage: React.FC = () => {
               {!auctionState?.bids || auctionState.bids.length === 0 ? (
                 <p className="text-xs text-slate-500 text-center py-4">No bids placed yet on current player</p>
               ) : (
-                auctionState.bids.map((b) => (
+                auctionState.bids.map((b: any) => (
                   <div key={b.id} className="p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-brand-600/20 border border-brand-500/30 flex items-center justify-center font-bold text-brand-400 text-[10px]">
-                        {b.team_name.charAt(0)}
-                      </div>
+                    <div className="flex items-center gap-2.5">
+                      {b.team_logo ? (
+                        <img src={b.team_logo} alt={b.team_name} className="w-7 h-7 rounded-lg object-cover border border-slate-700" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-lg bg-brand-600/20 border border-brand-500/30 flex items-center justify-center font-bold text-brand-400 text-[10px]">
+                          {b.team_name.charAt(0)}
+                        </div>
+                      )}
                       <div>
-                        <strong className="text-white block font-bold">{b.team_name}</strong>
-                        <span className="text-[9px] text-slate-500">{new Date(b.created_at).toLocaleTimeString()}</span>
+                        <div className="flex items-center gap-1.5">
+                          <strong className="text-white font-bold">{b.team_name}</strong>
+                          {b.captain_name && (
+                            <span className="text-[10px] text-slate-400 font-medium">({b.captain_name})</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-slate-500">{new Date(b.created_at).toLocaleTimeString()}</span>
+                          {b.increment > 0 && (
+                            <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                              +{formatPrice(b.increment)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <span className="text-xs font-black text-gold-400 font-mono bg-gold-500/10 px-2.5 py-1 rounded-xl border border-gold-500/20">
-                      {formatPrice(b.amount)}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-xs font-black text-gold-400 font-mono bg-gold-500/10 px-2.5 py-1 rounded-xl border border-gold-500/20 block">
+                        {formatPrice(b.amount)}
+                      </span>
+                      <span className="text-[8px] text-slate-500 uppercase font-bold block mt-0.5">Total Bid</span>
+                    </div>
                   </div>
                 ))
               )}

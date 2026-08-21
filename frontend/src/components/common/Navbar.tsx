@@ -109,11 +109,15 @@ export const Navbar: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 25 * 1024 * 1024) {
-        setEnforceError('Image file size exceeds 25MB limit');
+        setEnforceError(`📸 Image file size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds 25MB limit`);
         return;
       }
       setEnforcePhotoFile(file);
-      setEnforcePhotoPreview(URL.createObjectURL(file));
+      try {
+        setEnforcePhotoPreview(URL.createObjectURL(file));
+      } catch (err) {
+        // Fallback for camera raw / unsupported object URL formats
+      }
       setEnforceError(null);
     }
   };
@@ -764,7 +768,7 @@ export const Navbar: React.FC = () => {
                   <div className="flex-1">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,.jfif,.avif,.bmp,.gif,.svg,.tiff"
                       onChange={handleEnforcePhotoChange}
                       className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer"
                     />

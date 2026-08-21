@@ -259,19 +259,20 @@ async def upload_player_photo(
         db.commit()
         db.refresh(profile)
 
-    # Support all image formats (JPG, PNG, WEBP, HEIC, BMP, GIF, SVG, etc.)
-    content_type = (file.content_type or "").lower()
-    ext = os.path.splitext(file.filename or "")[1].lower()
-    if not content_type.startswith("image/") and ext not in [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".bmp", ".gif", ".tiff", ".svg"]:
-        raise HTTPException(status_code=400, detail="Uploaded file must be a valid image format.")
-
     contents = await file.read()
-    if len(contents) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Image size exceeds 25 MB maximum limit")
+    if not contents or len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded image file is empty.")
 
-    clean_ext = ext.replace(".", "") if ext else "jpg"
+    if len(contents) > 25 * 1024 * 1024:
+        size_mb = len(contents) / (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"Image size ({size_mb:.1f} MB) exceeds 25 MB maximum limit.")
+
+    ext = os.path.splitext(file.filename or "")[1].lower().replace(".", "")
+    if not ext:
+        ext = "jpg"
+
     target_id = profile.id if profile else current_user.id
-    filename = f"player_{target_id}_{uuid.uuid4().hex[:8]}.{clean_ext}"
+    filename = f"player_{target_id}_{uuid.uuid4().hex[:8]}.{ext}"
     file_path = os.path.join(UPLOAD_FOLDER, filename)
 
     with open(file_path, "wb") as f:

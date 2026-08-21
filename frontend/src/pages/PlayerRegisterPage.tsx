@@ -53,11 +53,15 @@ export const PlayerRegisterPage: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 25 * 1024 * 1024) {
-        setError('Image file size exceeds 25MB limit');
+        setError(`📸 Image file size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 25MB limit.`);
         return;
       }
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      try {
+        setImagePreview(URL.createObjectURL(file));
+      } catch (err) {
+        // Fallback for camera raw / unsupported object URL formats
+      }
       setError(null);
     }
   };
@@ -137,7 +141,7 @@ export const PlayerRegisterPage: React.FC = () => {
               </label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,.jfif,.avif,.bmp,.gif,.svg,.tiff"
                 onChange={handleImageChange}
                 className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer"
               />

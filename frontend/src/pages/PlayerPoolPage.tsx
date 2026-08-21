@@ -839,7 +839,7 @@ export const PlayerPoolPage: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-300 mb-1">Upload Employee Picture / Avatar</label>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,.jfif,.avif,.bmp,.gif,.svg,.tiff"
                   onChange={(e) => e.target.files && setNewPhotoFile(e.target.files[0])}
                   className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white cursor-pointer"
                 />

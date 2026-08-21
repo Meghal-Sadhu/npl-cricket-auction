@@ -63,14 +63,18 @@ export const AuctionRoomPage: React.FC = () => {
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const [lastBidId, setLastBidId] = useState<number | null>(null);
 
-  // Fetch bidding_cooldown_seconds setting
+  // Fetch and dynamically sync bidding_cooldown_seconds setting
   useEffect(() => {
-    api.get('/auction/settings').then(res => {
-      if (res.data && res.data.bidding_cooldown_seconds !== undefined) {
-        setCooldownBuffer(res.data.bidding_cooldown_seconds);
-      }
-    }).catch(() => {});
-  }, []);
+    if (auctionState?.bidding_cooldown_seconds !== undefined) {
+      setCooldownBuffer(auctionState.bidding_cooldown_seconds);
+    } else {
+      api.get('/auction/settings').then(res => {
+        if (res.data && res.data.bidding_cooldown_seconds !== undefined) {
+          setCooldownBuffer(res.data.bidding_cooldown_seconds);
+        }
+      }).catch(() => {});
+    }
+  }, [auctionState?.bidding_cooldown_seconds]);
 
   // Trigger Cooldown countdown whenever a new bid is registered
   useEffect(() => {

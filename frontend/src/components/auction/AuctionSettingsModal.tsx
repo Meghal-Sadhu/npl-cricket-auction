@@ -60,7 +60,8 @@ export const AuctionSettingsModal: React.FC<Props> = ({ isOpen, onClose, onSave 
           min_squad_size: settings.min_squad_size || settings.min_players || 15,
           timer_reset_on_bid: settings.timer_reset_on_bid,
           registration_closed_date: settings.registration_closed_date || '',
-          registration_closed: !!settings.registration_closed
+          registration_closed: !!settings.registration_closed,
+          bidding_cooldown_seconds: settings.bidding_cooldown_seconds ?? 3.5
         }
       });
 

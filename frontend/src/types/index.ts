@@ -109,6 +109,7 @@ export interface AuctionState {
   session_id: number;
   status: 'not_started' | 'live' | 'paused' | 'held' | 'completed' | 'intermission';
   timer_seconds: number;
+  bidding_cooldown_seconds?: number;
   intermission_seconds?: number;
   last_sold_info?: {
     player_name: string;

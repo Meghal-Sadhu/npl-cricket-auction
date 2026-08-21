@@ -135,6 +135,15 @@ export const AuctionRoomPage: React.FC = () => {
     }
   };
 
+  const formatPriceForSpeech = (val: number | null | undefined) => {
+    if (!val) return '5 Lakhs';
+    const lakhs = val / 100000;
+    if (lakhs % 1 === 0) {
+      return `${lakhs} Lakhs`;
+    }
+    return `${lakhs.toFixed(2)} Lakhs`;
+  };
+
   const speakSoldAnnouncement = (playerName: string, teamName: string, amount: number, isUnsold?: boolean) => {
     // STRICT RULE: Voice speech plays ONLY on ADMIN laptop/device!
     if (user?.role !== 'admin') return;
@@ -146,11 +155,11 @@ export const AuctionRoomPage: React.FC = () => {
 
       let text = '';
       if (isUnsold) {
-        text = `Attention everyone! Player ${playerName} goes unsold at base price.`;
+        text = `Attention everyone! Player ${playerName} goes unsold at base price of ${formatPriceForSpeech(amount)}.`;
       } else {
-        const formattedAmount = formatPrice(amount);
+        const formattedAmount = formatPriceForSpeech(amount);
         const cheerfulTemplates = [
-          `Phenomenal news! ${playerName} has been SOLD to the mighty ${teamName} for a grand ${formattedAmount}! What a magnificent pick!`,
+          `Phenomenal news! ${playerName} has been SOLD to the mighty ${teamName} for ${formattedAmount}! What a magnificent pick!`,
           `Big announcement! ${playerName} is officially joining ${teamName} for ${formattedAmount}! Huge congratulations to the franchise!`,
           `Outstanding bid! ${playerName} goes to ${teamName} for an impressive ${formattedAmount}! What a fantastic move!`
         ];
@@ -158,12 +167,12 @@ export const AuctionRoomPage: React.FC = () => {
       }
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.98;
-      utterance.pitch = 1.1;
+      utterance.rate = 0.92;
+      utterance.pitch = 1.05;
       utterance.volume = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => (v.lang.includes('en-IN') || v.lang.includes('en-GB') || v.lang.includes('en-US')) && !v.name.includes('Google'));
+      const preferredVoice = voices.find(v => (v.name.includes('Natural') || v.name.includes('Google') || v.lang.includes('en-US') || v.lang.includes('en-GB')) && !v.name.includes('Hindi'));
       if (preferredVoice) utterance.voice = preferredVoice;
 
       window.speechSynthesis.speak(utterance);
@@ -544,6 +553,14 @@ export const AuctionRoomPage: React.FC = () => {
                     <Pause className="w-4 h-4" /> ⏸️ Pause Auction
                   </button>
                 )}
+
+                <button
+                  onClick={() => handleAdminAction('restart')}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
+                  title="Restart Auction Session & Reset Timer"
+                >
+                  <RotateCcw className="w-4 h-4" /> 🔄 Restart Auction
+                </button>
 
                 <button
                   disabled={!isLive || !currentPlayer}

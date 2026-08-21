@@ -206,10 +206,14 @@ class AuctionEngine:
                 "is_squad_full": metrics["is_squad_full"]
             })
 
+        cooldown_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "bidding_cooldown_seconds").first()
+        bidding_cooldown = float(cooldown_setting.value) if cooldown_setting else 3.5
+
         return {
             "session_id": session.id,
             "status": session.status,
             "timer_seconds": display_timer,
+            "bidding_cooldown_seconds": bidding_cooldown,
             "intermission_seconds": self.intermission_seconds if session.status == "intermission" else None,
             "last_sold_info": self.last_sold_info if session.status == "intermission" else None,
             "current_player": current_player,

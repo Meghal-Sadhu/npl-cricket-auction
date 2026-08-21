@@ -203,6 +203,28 @@ async def resume_auction(
     await auction_engine.broadcast_state("AUCTION_RESUMED")
     return {"message": "Auction session resumed"}
 
+@router.post("/restart")
+async def restart_auction(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
+    if not session:
+        session = AuctionSession(status="live")
+        db.add(session)
+    else:
+        session.status = "live"
+
+    db.add(Notification(message="🔄 Auction Session Restarted by Admin!", type="info"))
+    db.commit()
+
+    timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()
+    timer_len = int(timer_setting.value) if timer_setting else 30
+
+    await auction_engine.start_timer(timer_len)
+    await auction_engine.broadcast_state("AUCTION_RESTARTED")
+    return {"message": "Auction session restarted"}
+
 @router.post("/hold")
 async def hold_auction(
     db: Session = Depends(get_db),

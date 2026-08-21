@@ -58,27 +58,108 @@ export const AuctionRoomPage: React.FC = () => {
     };
   }, [auctionState?.status, auctionState?.intermission_seconds]);
 
-  // Voice Commentary Announcement State
+  // Live Bidding Cooldown Buffer State (Default 3.5s)
+  const [cooldownBuffer, setCooldownBuffer] = useState<number>(3.5);
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
+  const [lastBidId, setLastBidId] = useState<number | null>(null);
+
+  // Fetch bidding_cooldown_seconds setting
+  useEffect(() => {
+    api.get('/auction/settings').then(res => {
+      if (res.data && res.data.bidding_cooldown_seconds !== undefined) {
+        setCooldownBuffer(res.data.bidding_cooldown_seconds);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Trigger Cooldown countdown whenever a new bid is registered
+  useEffect(() => {
+    if (auctionState?.bids && auctionState.bids.length > 0) {
+      const newestBid = auctionState.bids[0];
+      if (newestBid && newestBid.id !== lastBidId) {
+        setLastBidId(newestBid.id);
+        setCooldownRemaining(cooldownBuffer);
+      }
+    }
+  }, [auctionState?.bids, cooldownBuffer]);
+
+  // Cooldown countdown tick (runs every 100ms)
+  useEffect(() => {
+    let interval: any = null;
+    if (cooldownRemaining > 0) {
+      interval = setInterval(() => {
+        setCooldownRemaining(prev => {
+          if (prev <= 0.1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 0.1;
+        });
+      }, 100);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cooldownRemaining > 0]);
+
+  // Voice Commentary Announcement State (Admin Only)
   const [speechEnabled, setSpeechEnabled] = useState(true);
   const [lastAnnouncedKey, setLastAnnouncedKey] = useState<string | null>(null);
 
+  const playCelebrationChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+
+      // Energetic 4-note celebration chime (C5 -> E5 -> G5 -> C6)
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+
+        const startTime = ctx.currentTime + idx * 0.08;
+        gain.gain.setValueAtTime(0.35, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.28);
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const speakSoldAnnouncement = (playerName: string, teamName: string, amount: number, isUnsold?: boolean) => {
+    // STRICT RULE: Voice speech plays ONLY on ADMIN laptop/device!
+    if (user?.role !== 'admin') return;
     if (!speechEnabled || !('speechSynthesis' in window)) return;
 
     try {
       window.speechSynthesis.cancel();
+      playCelebrationChime();
 
       let text = '';
       if (isUnsold) {
-        text = `Attention! Player ${playerName} goes unsold at base price.`;
+        text = `Attention everyone! Player ${playerName} goes unsold at base price.`;
       } else {
         const formattedAmount = formatPrice(amount);
-        text = `Congratulations! ${playerName} is sold to ${teamName} for ${formattedAmount}!`;
+        const cheerfulTemplates = [
+          `Phenomenal news! ${playerName} has been SOLD to the mighty ${teamName} for a grand ${formattedAmount}! What a magnificent pick!`,
+          `Big announcement! ${playerName} is officially joining ${teamName} for ${formattedAmount}! Huge congratulations to the franchise!`,
+          `Outstanding bid! ${playerName} goes to ${teamName} for an impressive ${formattedAmount}! What a fantastic move!`
+        ];
+        text = cheerfulTemplates[Math.floor(Math.random() * cheerfulTemplates.length)];
       }
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.pitch = 1.0;
+      utterance.rate = 0.98;
+      utterance.pitch = 1.1;
       utterance.volume = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
@@ -639,7 +720,7 @@ export const AuctionRoomPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Dynamic Tiered Bid Buttons for Captains */}
+            {/* Dynamic Tiered Bid Buttons for Captains with Live Cooldown Buffer */}
             {user?.role === 'captain' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold">
@@ -647,19 +728,30 @@ export const AuctionRoomPage: React.FC = () => {
                   <span className="text-brand-400 font-mono">{formatPrice(currentPrice)} Tier</span>
                 </div>
 
-                <div className={`grid ${incrementOptions.length === 4 ? 'grid-cols-2' : 'grid-cols-2'} gap-2.5`}>
-                  {incrementOptions.map((inc) => (
-                    <button
-                      key={inc}
-                      disabled={!currentPlayer || !isLive || isUserHighestBidder}
-                      onClick={() => handlePlaceBid(inc)}
-                      className="py-3 px-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm shadow-xl shadow-brand-500/25 flex flex-col items-center justify-center transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      <span>+{formatPrice(inc)}</span>
-                      <span className="text-[9px] font-normal opacity-80">Bid {formatPrice(currentPrice + inc)}</span>
-                    </button>
-                  ))}
-                </div>
+                {cooldownRemaining > 0 ? (
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center space-y-1 animate-pulse">
+                    <span className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                      <Clock className="w-4 h-4 text-amber-400 animate-spin" /> Bidding Cooldown Active
+                    </span>
+                    <p className="text-xs font-mono font-extrabold text-amber-300">
+                      Next bid available in {cooldownRemaining.toFixed(1)}s
+                    </p>
+                  </div>
+                ) : (
+                  <div className={`grid grid-cols-2 gap-2.5`}>
+                    {incrementOptions.map((inc) => (
+                      <button
+                        key={inc}
+                        disabled={!currentPlayer || !isLive || isUserHighestBidder || cooldownRemaining > 0}
+                        onClick={() => handlePlaceBid(inc)}
+                        className="py-3 px-2 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm shadow-xl shadow-brand-500/25 flex flex-col items-center justify-center transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <span>+{formatPrice(inc)}</span>
+                        <span className="text-[9px] font-normal opacity-80">Bid {formatPrice(currentPrice + inc)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {isUserHighestBidder && (
                   <p className="text-[11px] text-amber-400 font-bold italic">

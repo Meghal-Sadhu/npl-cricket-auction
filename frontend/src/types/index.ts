@@ -140,6 +140,7 @@ export interface ApplicationSettings {
   timer_reset_on_bid: boolean;
   registration_closed_date?: string;
   registration_closed?: boolean;
+  bidding_cooldown_seconds?: number;
 }
 
 export interface NotificationItem {

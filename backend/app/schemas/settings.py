@@ -15,3 +15,4 @@ class SettingsOut(BaseModel):
     timer_reset_on_bid: bool = True
     registration_closed_date: Optional[str] = None
     registration_closed: bool = False
+    bidding_cooldown_seconds: float = 3.5

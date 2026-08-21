@@ -469,7 +469,8 @@ def get_settings(db: Session = Depends(get_db)):
         min_squad_size=int(setting_map.get("min_squad_size", 15)),
         timer_reset_on_bid=setting_map.get("timer_reset_on_bid", "true").lower() == "true",
         registration_closed_date=setting_map.get("registration_closed_date", None),
-        registration_closed=setting_map.get("registration_closed", "false").lower() == "true"
+        registration_closed=setting_map.get("registration_closed", "false").lower() == "true",
+        bidding_cooldown_seconds=float(setting_map.get("bidding_cooldown_seconds", 3.5))
     )
 
 @router.put("/settings", response_model=SettingsOut)

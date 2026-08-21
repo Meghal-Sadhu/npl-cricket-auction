@@ -217,6 +217,24 @@ export const AuctionSettingsModal: React.FC<Props> = ({ isOpen, onClose, onSave 
               />
             </div>
 
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">Bidding Cooldown Buffer (Pacing Control)</label>
+              <select
+                value={settings.bidding_cooldown_seconds ?? 3.5}
+                onChange={(e) => setSettings({ ...settings, bidding_cooldown_seconds: parseFloat(e.target.value) })}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white cursor-pointer"
+              >
+                <option value={1.5}>1.5 Seconds (Fast Pace)</option>
+                <option value={2.0}>2.0 Seconds</option>
+                <option value={2.5}>2.5 Seconds</option>
+                <option value={3.0}>3.0 Seconds</option>
+                <option value={3.5}>3.5 Seconds (Default - Recommended)</option>
+                <option value={4.0}>4.0 Seconds</option>
+                <option value={5.0}>5.0 Seconds (Relaxed Pace)</option>
+              </select>
+              <span className="text-[10px] text-slate-500 block mt-1">Prevents rapid-fire continuous bidding by enforcing a mandatory pause between consecutive bids.</span>
+            </div>
+
             {/* Requirement 6: Registration Closing Controls */}
             <div className="p-3 bg-slate-900/90 rounded-2xl border border-amber-500/30 space-y-3">
               <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block flex items-center gap-1">

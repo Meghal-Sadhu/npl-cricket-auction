@@ -41,6 +41,18 @@ def validate_bid(team: Team, bid_amount: float, current_price: float, session: A
     if highest_bid and highest_bid.team_id == team.id:
         return False, f"Your team '{team.name}' is already the highest bidder for this player! Wait for another team to bid."
 
+    # Bidding Cooldown Buffer Rule (Default 3.5 seconds)
+    from app.models.settings import ApplicationSettings
+    from datetime import datetime
+    cooldown_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "bidding_cooldown_seconds").first()
+    cooldown_seconds = float(cooldown_setting.value) if cooldown_setting else 3.5
+
+    if highest_bid and highest_bid.created_at:
+        elapsed = (datetime.utcnow() - highest_bid.created_at).total_seconds()
+        if elapsed < cooldown_seconds:
+            remaining = cooldown_seconds - elapsed
+            return False, f"⏱️ Bidding cooldown active! Please wait {remaining:.1f}s before placing next bid."
+
     if bid_amount <= current_price:
         return False, f"Bid amount (₹{bid_amount:,.0f}) must be higher than current price (₹{current_price:,.0f})."
         

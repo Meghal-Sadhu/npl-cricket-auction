@@ -136,17 +136,14 @@ export const PlayerPoolPage: React.FC = () => {
 
   const handleAdminCreatePlayer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isShopfloor) {
-      const cleanEmail = newEmail.trim().toLowerCase();
-      if (!cleanEmail.endsWith('@nikkisoceig.com')) {
-        alert('Player corporate email address must end with @nikkisoceig.com');
-        return;
-      }
+    let cleanEmail = newEmail.trim().toLowerCase();
+    if (!isShopfloor && cleanEmail && !cleanEmail.includes('@')) {
+      cleanEmail = `${cleanEmail}@nikkisoceig.com`;
     }
     try {
       const res = await api.post('/players/admin-create', {
         name: newName,
-        email: isShopfloor ? undefined : newEmail,
+        email: isShopfloor ? undefined : cleanEmail,
         password: isShopfloor ? undefined : newPassword,
         is_shopfloor: isShopfloor,
         department: isShopfloor ? 'Shopfloor' : newDept,

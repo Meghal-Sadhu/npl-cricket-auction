@@ -148,59 +148,71 @@ def admin_create_player(
             raise HTTPException(status_code=400, detail="Password is required for regular users.")
         
         clean_email = p_in.email.strip().lower()
-        if not clean_email.endswith("@nikkisoceig.com"):
-            raise HTTPException(
-                status_code=400,
-                detail="Player corporate email address must end with @nikkisoceig.com"
-            )
-
-        existing_user = db.query(User).filter(func.lower(User.email) == clean_email).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=400,
-                detail="An account with this email address already exists in the database."
-            )
+        if "@" not in clean_email:
+            clean_email = f"{clean_email}@nikkisoceig.com"
 
         user_email = clean_email
         user_password = p_in.password
 
-    # Fixed base price of ₹5 Lakh
+    # Check if User account already exists in database
+    existing_user = db.query(User).filter(func.lower(User.email) == user_email).first() if not p_in.is_shopfloor else None
+
+    if existing_user:
+        user = existing_user
+        if p_in.password:
+            user.password_hash = get_password_hash(p_in.password)
+        if p_in.name:
+            user.name = p_in.name
+        if p_in.department:
+            user.department = p_in.department
+        db.commit()
+    else:
+        # Create User account
+        user = User(
+            name=p_in.name,
+            email=user_email,
+            password_hash=get_password_hash(user_password),
+            role="player",
+            department=p_in.department or ("Shopfloor" if p_in.is_shopfloor else "General")
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # Check if PlayerProfile already exists for this user
+    profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == user.id).first()
     default_base = 500000.0
 
-    # Create User account
-    user = User(
-        name=p_in.name,
-        email=user_email,
-        password_hash=get_password_hash(user_password),
-        role="player",
-        department=p_in.department or ("Shopfloor" if p_in.is_shopfloor else "General")
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    if not profile:
+        profile = PlayerProfile(
+            user_id=user.id,
+            employee_id=p_in.employee_id or f"EMP-{user.id:03d}",
+            age=p_in.age,
+            mobile=p_in.mobile,
+            jersey_name=p_in.jersey_name,
+            jersey_number=p_in.jersey_number,
+            tshirt_size=p_in.tshirt_size,
+            category=p_in.category or "Batsman",
+            batting_style=p_in.batting_style or "Right Hand",
+            bowling_style=p_in.bowling_style or "Regular Bowler",
+            experience_level=p_in.experience_level or "Intermediate",
+            emergency_contact=p_in.emergency_contact,
+            bio=p_in.bio,
+            achievements=p_in.achievements,
+            preferred_batting_order=p_in.preferred_batting_order,
+            base_price=default_base,
+            is_submitted=True,
+            is_shopfloor=p_in.is_shopfloor
+        )
+        db.add(profile)
+    else:
+        for field in ["employee_id", "age", "mobile", "jersey_name", "jersey_number", "tshirt_size", "category", "batting_style", "bowling_style", "experience_level", "emergency_contact", "bio", "achievements", "preferred_batting_order"]:
+            val = getattr(p_in, field, None)
+            if val is not None:
+                setattr(profile, field, val)
+        profile.is_submitted = True
+        profile.is_shopfloor = p_in.is_shopfloor
 
-    # Create Full PlayerProfile
-    profile = PlayerProfile(
-        user_id=user.id,
-        employee_id=p_in.employee_id or f"EMP-{user.id:03d}",
-        age=p_in.age,
-        mobile=p_in.mobile,
-        jersey_name=p_in.jersey_name,
-        jersey_number=p_in.jersey_number,
-        tshirt_size=p_in.tshirt_size,
-        category=p_in.category,
-        batting_style=p_in.batting_style,
-        bowling_style=p_in.bowling_style,
-        experience_level=p_in.experience_level,
-        emergency_contact=p_in.emergency_contact,
-        bio=p_in.bio,
-        achievements=p_in.achievements,
-        preferred_batting_order=p_in.preferred_batting_order,
-        base_price=default_base,
-        is_submitted=True,
-        is_shopfloor=p_in.is_shopfloor
-    )
-    db.add(profile)
     db.commit()
     db.refresh(profile)
 

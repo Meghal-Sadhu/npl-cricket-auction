@@ -8,7 +8,7 @@ import { AuctionQueueDrawer } from '../components/auction/AuctionQueueDrawer';
 import { PlayerDetailModal } from '../components/players/PlayerDetailModal';
 import { 
   Radio, Play, Pause, Square, SkipForward, RotateCcw, Shuffle, 
-  DollarSign, Shield, Users, AlertCircle, Clock, Volume2, Sparkles, Gavel, Settings, Search 
+  DollarSign, Shield, Users, AlertCircle, Clock, Volume2, VolumeX, Sparkles, Gavel, Settings, Search 
 } from 'lucide-react';
 
 export const AuctionRoomPage: React.FC = () => {
@@ -35,6 +35,82 @@ export const AuctionRoomPage: React.FC = () => {
 
   // Dynamic max timer tracking for ring calculation
   const [maxTimerDuration, setMaxTimerDuration] = useState<number>(30);
+  // Intermission Timer Countdown
+  useEffect(() => {
+    let interval: any = null;
+    if (auctionState?.status === 'intermission') {
+      const initialBreak = auctionState.intermission_seconds ?? 15;
+      setIntermissionTime(initialBreak);
+      interval = setInterval(() => {
+        setIntermissionTime(prev => {
+          if (prev === null || prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setIntermissionTime(null);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [auctionState?.status, auctionState?.intermission_seconds]);
+
+  // Voice Commentary Announcement State
+  const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [lastAnnouncedKey, setLastAnnouncedKey] = useState<string | null>(null);
+
+  const speakSoldAnnouncement = (playerName: string, teamName: string, amount: number, isUnsold?: boolean) => {
+    if (!speechEnabled || !('speechSynthesis' in window)) return;
+
+    try {
+      window.speechSynthesis.cancel();
+
+      let text = '';
+      if (isUnsold) {
+        text = `Attention! Player ${playerName} goes unsold at base price.`;
+      } else {
+        const formattedAmount = formatPrice(amount);
+        text = `Congratulations! ${playerName} is sold to ${teamName} for ${formattedAmount}!`;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => (v.lang.includes('en-IN') || v.lang.includes('en-GB') || v.lang.includes('en-US')) && !v.name.includes('Google'));
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error('Speech synthesis error:', err);
+    }
+  };
+
+  // Intermission Break & Sold Overlay Calculations
+  const timerSeconds = auctionState?.timer_seconds ?? maxTimerDuration;
+  const isIntermission = auctionState?.status === 'intermission';
+  const activeSoldInfo = soldOverlay || auctionState?.last_sold_info;
+  const currentIntermissionSeconds = intermissionTime ?? auctionState?.intermission_seconds ?? timerSeconds;
+
+  useEffect(() => {
+    if (activeSoldInfo) {
+      const key = `${activeSoldInfo.player_name}_${activeSoldInfo.team_name}_${activeSoldInfo.amount}_${activeSoldInfo.is_unsold}`;
+      if (key !== lastAnnouncedKey) {
+        setLastAnnouncedKey(key);
+        speakSoldAnnouncement(
+          activeSoldInfo.player_name,
+          activeSoldInfo.team_name,
+          activeSoldInfo.amount,
+          activeSoldInfo.is_unsold
+        );
+      }
+    }
+  }, [activeSoldInfo, speechEnabled]);
 
   useEffect(() => {
     fetchSettingsMaxTimer();
@@ -147,12 +223,6 @@ export const AuctionRoomPage: React.FC = () => {
     auctionState.bids[0].team_id === userTeam.id
   );
 
-  // Intermission Break & Sold Overlay Calculations
-  const timerSeconds = auctionState?.timer_seconds ?? maxTimerDuration;
-  const isIntermission = auctionState?.status === 'intermission';
-  const activeSoldInfo = soldOverlay || auctionState?.last_sold_info;
-  const currentIntermissionSeconds = intermissionTime ?? auctionState?.intermission_seconds ?? timerSeconds;
-
   // Timer Calculation (Radius = 74, Circumference = 465)
   const currentMax = Math.max(maxTimerDuration, timerSeconds);
   const timerPercentage = Math.min(100, Math.max(0, (timerSeconds / currentMax) * 100));
@@ -220,14 +290,35 @@ export const AuctionRoomPage: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">Official Nikkiso Corporate Cricket Premier League 2027 Auction Portal</p>
         </div>
 
-        {user?.role === 'admin' && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowSettingsModal(true)}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
+            onClick={() => {
+              const nextState = !speechEnabled;
+              setSpeechEnabled(nextState);
+              if (!nextState && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+              }
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all cursor-pointer shadow-md ${
+              speechEnabled 
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30' 
+                : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
+            }`}
+            title={speechEnabled ? "Voice Commentary Enabled" : "Voice Commentary Muted"}
           >
-            <Settings className="w-4 h-4 text-brand-400" /> Auction Rules & Rules Settings
+            {speechEnabled ? <Volume2 className="w-4 h-4 text-amber-400 animate-pulse" /> : <VolumeX className="w-4 h-4" />}
+            Voice Commentary: <span className="font-extrabold">{speechEnabled ? 'ON' : 'OFF'}</span>
           </button>
-        )}
+
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
+            >
+              <Settings className="w-4 h-4 text-brand-400" /> Auction Rules & Settings
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 15-Second Post-Sale Intermission Break Countdown Banner */}

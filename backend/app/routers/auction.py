@@ -310,14 +310,11 @@ async def select_player_for_auction(
         AuctionQueue.player_id == player_id
     ).first()
 
-    if session.current_player_id and session.current_player_id != player_id:
-        old_q = db.query(AuctionQueue).filter(
-            AuctionQueue.session_id == session.id,
-            AuctionQueue.player_id == session.current_player_id,
-            AuctionQueue.status == "current"
-        ).first()
-        if old_q:
-            old_q.status = "queued"
+    db.query(AuctionQueue).filter(
+        AuctionQueue.session_id == session.id,
+        AuctionQueue.status == "current",
+        AuctionQueue.player_id != player_id
+    ).update({"status": "queued"}, synchronize_session=False)
 
     session.current_player_id = player_id
     if queue_entry:

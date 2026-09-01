@@ -84,6 +84,22 @@ class AuctionEngine:
                 ))
             db.commit()
 
+        # 5. Clean up any orphaned 'current' statuses so only session.current_player_id is marked 'current'
+        session = db.query(AuctionSession).filter(AuctionSession.id == session_id).first()
+        if session:
+            if session.current_player_id:
+                db.query(AuctionQueue).filter(
+                    AuctionQueue.session_id == session_id,
+                    AuctionQueue.status == "current",
+                    AuctionQueue.player_id != session.current_player_id
+                ).update({"status": "queued"}, synchronize_session=False)
+            else:
+                db.query(AuctionQueue).filter(
+                    AuctionQueue.session_id == session_id,
+                    AuctionQueue.status == "current"
+                ).update({"status": "queued"}, synchronize_session=False)
+            db.commit()
+
     def get_full_state(self, db: Session, user_role: str = "admin", user_team_id: Optional[int] = None) -> Dict[str, Any]:
         session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
         if not session:

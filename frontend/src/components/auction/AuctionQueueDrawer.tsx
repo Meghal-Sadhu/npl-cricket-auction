@@ -57,6 +57,15 @@ export const AuctionQueueDrawer: React.FC<Props> = ({ queue, isAdmin, onRefresh,
     }
   };
 
+  const handleSortCategory = async (category: string) => {
+    try {
+      await api.post('/auction/reorder-queue-by-category', { preferred_category: category });
+      onRefresh();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to reorder queue');
+    }
+  };
+
   const formatPrice = (val: number) => {
     if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
     if (val >= 100000) return `₹${(val / 100000).toFixed(2)} Lakh`;
@@ -97,6 +106,39 @@ export const AuctionQueueDrawer: React.FC<Props> = ({ queue, isAdmin, onRefresh,
             }`}
           >
             Sold ({queue.filter(q => q.status === 'sold' || q.is_sold).length})
+          </button>
+        </div>
+      </div>
+
+      {/* Category Reorder Action Bar for Admin */}
+      <div className="flex items-center justify-between bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-xs">
+        <span className="text-[10px] text-amber-400 font-extrabold uppercase flex items-center gap-1 shrink-0">
+          <ListFilter className="w-3.5 h-3.5" /> Reorder Queue:
+        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => handleSortCategory('All-Rounder')}
+            className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold cursor-pointer transition-all"
+          >
+            ⭐ All-Rounders First
+          </button>
+          <button
+            onClick={() => handleSortCategory('Batsman')}
+            className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold cursor-pointer transition-all"
+          >
+            🏏 Batsmen First
+          </button>
+          <button
+            onClick={() => handleSortCategory('Bowler')}
+            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer transition-all"
+          >
+            🎯 Bowlers First
+          </button>
+          <button
+            onClick={() => handleSortCategory('Wicket Keeper')}
+            className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold cursor-pointer transition-all"
+          >
+            🧤 Wicket Keepers First
           </button>
         </div>
       </div>

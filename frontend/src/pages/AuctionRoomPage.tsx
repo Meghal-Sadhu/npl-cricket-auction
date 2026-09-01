@@ -433,50 +433,68 @@ export const AuctionRoomPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Captain's Team Purse Card */}
             {myTeam && (
-              <div className="lg:col-span-4 glass-card rounded-2xl p-3.5 border border-brand-500/30 bg-gradient-to-r from-slate-900/95 via-brand-950/40 to-slate-900/95 flex items-center justify-between shadow-xl">
-                <div className="flex items-center gap-3 truncate">
+              <div className="lg:col-span-3 glass-card rounded-2xl p-4 border border-brand-500/40 bg-gradient-to-br from-slate-900/95 via-brand-950/40 to-slate-900/95 flex flex-col justify-between shadow-xl space-y-2">
+                <div className="flex items-center gap-3">
                   {myTeam.logo_path ? (
-                    <img src={getImageUrl(myTeam.logo_path)} alt={myTeam.name} className="w-10 h-10 rounded-xl object-cover border border-slate-700 bg-slate-900 shrink-0" />
+                    <img src={getImageUrl(myTeam.logo_path)} alt={myTeam.name} className="w-11 h-11 rounded-xl object-cover border border-slate-700 bg-slate-900 shrink-0 shadow-md" />
                   ) : (
-                    <Shield className="w-10 h-10 text-brand-400 p-2 bg-brand-500/10 rounded-xl border border-brand-500/20 shrink-0" />
+                    <Shield className="w-11 h-11 text-brand-400 p-2 bg-brand-500/10 rounded-xl border border-brand-500/20 shrink-0" />
                   )}
                   <div className="truncate">
-                    <span className="text-[10px] text-brand-400 font-extrabold uppercase tracking-wider block truncate">Your Team Purse ({myTeam.name})</span>
-                    <p className="text-base sm:text-lg font-black text-white font-mono tracking-tight">
-                      Spendable: <span className="text-emerald-400">{formatPrice(myTeam.spendable_budget)}</span>
-                    </p>
+                    <span className="text-[10px] text-brand-400 font-extrabold uppercase tracking-wider block truncate">Your Team Purse</span>
+                    <h3 className="text-sm font-black text-white truncate">{myTeam.name}</h3>
+                    <span className="text-xs text-amber-400 font-bold block truncate">
+                      Capt: {myTeam.captain_name || user?.name || 'Captain'}
+                    </span>
                   </div>
                 </div>
 
-                <div className="text-right text-xs font-bold space-y-0.5 shrink-0 pl-2">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Spent: <span className="text-gold-400 font-mono">{formatPrice(myTeam.budget_used)}</span></span>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Squad: <span className="text-white font-mono">{myTeam.players_count ?? myTeam.total_assigned_players ?? 0}/15</span></span>
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-[9px] text-slate-400 uppercase font-extrabold block">Spendable Purse</span>
+                    <span className="text-xl font-black text-emerald-400 font-mono tracking-tight">{formatPrice(myTeam.spendable_budget)}</span>
+                  </div>
+
+                  <div className="text-right text-xs font-bold space-y-0.5">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Spent: <span className="text-gold-400 font-mono">{formatPrice(myTeam.budget_used)}</span></span>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Squad: <span className="text-white font-mono">{myTeam.players_count ?? myTeam.total_assigned_players ?? 0}/15</span></span>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Franchise Overview Purse Rankings Card (Right Beside Team Purse) */}
-            <div className={`glass-card rounded-2xl p-3.5 border border-slate-800 bg-slate-900/80 shadow-xl ${myTeam ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-gold-400" /> Franchise Purse Rankings (Highest to Lowest)
+            <div className={`glass-card rounded-2xl p-4 border border-slate-800 bg-slate-900/80 shadow-xl ${myTeam ? 'lg:col-span-9' : 'lg:col-span-12'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs sm:text-sm font-black text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-gold-400" /> Franchise Purse Rankings (Highest to Lowest)
                 </h4>
-                <span className="text-[10px] text-slate-500 font-bold uppercase">{sortedFranchises.length} Teams Competing</span>
+                <span className="text-[11px] text-slate-400 font-extrabold uppercase">{sortedFranchises.length} Teams Competing</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
                 {sortedFranchises.map((t, idx) => (
-                  <div key={t.id} className="p-2 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 truncate pr-1">
+                  <div key={t.id} className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-col justify-between space-y-1.5 shadow-sm">
+                    <div className="flex items-center gap-1.5 truncate">
                       <span className="text-[9px] font-black text-gold-400 bg-gold-500/10 px-1.5 py-0.5 rounded border border-gold-500/20 shrink-0">#{idx + 1}</span>
                       {t.logo_path ? (
                         <img src={getImageUrl(t.logo_path)} alt={t.name} className="w-5 h-5 rounded-md object-cover border border-slate-700 shrink-0" />
                       ) : null}
-                      <span className="text-white font-extrabold truncate text-[11px]">{t.name}</span>
+                      <span className="text-white font-bold truncate text-xs">{t.name}</span>
                     </div>
-                    <span className="text-[10px] font-black text-emerald-400 font-mono shrink-0">
-                      {formatPrice(t.spendable_budget)}
-                    </span>
+
+                    {t.captain_name && (
+                      <span className="text-[9px] text-slate-400 font-semibold truncate block">
+                        Capt: {t.captain_name}
+                      </span>
+                    )}
+
+                    <div className="pt-1 border-t border-slate-900 flex items-center justify-between">
+                      <span className="text-[9px] text-slate-500 uppercase font-bold">Purse</span>
+                      <span className="text-xs font-black text-emerald-400 font-mono">
+                        {formatPrice(t.spendable_budget)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -628,13 +646,7 @@ export const AuctionRoomPage: React.FC = () => {
                   </button>
                 )}
 
-                <button
-                  onClick={() => handleAdminAction('restart')}
-                  className="px-4 py-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
-                  title="Restart Auction Session & Reset Timer"
-                >
-                  <RotateCcw className="w-4 h-4" /> 🔄 Restart Auction
-                </button>
+
 
                 <button
                   disabled={!isLive || !currentPlayer}
@@ -759,15 +771,6 @@ export const AuctionRoomPage: React.FC = () => {
             )}
           </div>
 
-          {/* Embedded Interactive Auction Queue Drawer - VISIBLE ONLY TO ADMIN */}
-          {user?.role === 'admin' && (
-            <AuctionQueueDrawer
-              queue={auctionState?.queue || []}
-              isAdmin={true}
-              onRefresh={fetchState}
-              onSelectPlayer={openPlayerModalById}
-            />
-          )}
         </div>
 
         {/* Right Column: Timer Ring, Bidding Buttons & Franchise Overview (5 cols) */}
@@ -915,6 +918,16 @@ export const AuctionRoomPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Embedded Interactive Auction Queue Drawer - VISIBLE ONLY TO ADMIN (Placed in Right Column below Recent Bids) */}
+          {user?.role === 'admin' && (
+            <AuctionQueueDrawer
+              queue={auctionState?.queue || []}
+              isAdmin={true}
+              onRefresh={fetchState}
+              onSelectPlayer={openPlayerModalById}
+            />
+          )}
 
         </div>
 

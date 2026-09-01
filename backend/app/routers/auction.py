@@ -544,19 +544,20 @@ async def reorder_queue_by_category(
     pref = (req.preferred_category or "All-Rounder").lower()
 
     if "batsman" in pref:
-        prio_map = {"batsman": 1, "all-rounder": 2, "bowler": 3, "wicket keeper": 4, "wicketkeeper": 4}
+        prio_map = {"batsman": 1, "all rounder": 2, "bowler": 3, "wicket keeper": 4}
     elif "bowler" in pref:
-        prio_map = {"bowler": 1, "all-rounder": 2, "batsman": 3, "wicket keeper": 4, "wicketkeeper": 4}
+        prio_map = {"bowler": 1, "all rounder": 2, "batsman": 3, "wicket keeper": 4}
     elif "wicket" in pref:
-        prio_map = {"wicket keeper": 1, "wicketkeeper": 1, "all-rounder": 2, "batsman": 3, "bowler": 4}
+        prio_map = {"wicket keeper": 1, "all rounder": 2, "batsman": 3, "bowler": 4}
     else: # Default: All-Rounders first
-        prio_map = {"all-rounder": 1, "batsman": 2, "bowler": 3, "wicket keeper": 4, "wicketkeeper": 4}
+        prio_map = {"all rounder": 1, "batsman": 2, "bowler": 3, "wicket keeper": 4}
 
     def sort_key(item):
-        cat = (item.player.category or "").lower() if item.player else ""
+        cat = (item.player.category or "").lower().replace("-", " ").strip() if item.player else ""
         prio = 99
         for k, v in prio_map.items():
-            if k in cat:
+            k_norm = k.replace("-", " ").strip()
+            if k_norm in cat or ("all" in k_norm and "all" in cat):
                 prio = v
                 break
         return (prio, item.id)

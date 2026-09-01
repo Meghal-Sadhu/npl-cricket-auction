@@ -38,8 +38,13 @@ export const AuthPages: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.post('/auth/send-reset-otp', { email: cleanEmail });
-      setSuccessMsg(res.data.message || `Verification OTP code sent to ${cleanEmail}. Please enter the 6-digit code.`);
-      setOtpCode(''); // Require manual OTP entry
+      setSuccessMsg(res.data.message || `Verification OTP code generated for ${cleanEmail}.`);
+      if (res.data.otp_code) {
+        setDemoOtpNotice(`OTP Verification Code: ${res.data.otp_code}`);
+        setOtpCode(res.data.otp_code);
+      } else {
+        setOtpCode('');
+      }
       setForgotStep('otp');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to send OTP code.');

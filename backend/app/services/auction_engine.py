@@ -207,14 +207,11 @@ class AuctionEngine:
                 "image_path": p.image_path
             })
 
-        # Fetch Teams with Budget privacy for Captains/Players
+        # Fetch Teams with Budget metrics visible for Franchise Overview
         teams_list = []
         teams = db.query(Team).all()
         for t in teams:
             metrics = calculate_team_budget_metrics(t, db)
-            
-            # Privacy rule: Only Admin or the Team's own Captain can see budget numbers!
-            show_budget = (user_role == "admin") or (user_team_id and user_team_id == t.id)
             
             teams_list.append({
                 "id": t.id,
@@ -222,10 +219,10 @@ class AuctionEngine:
                 "logo_path": t.logo_path,
                 "captain_id": t.captain_id,
                 "captain_name": t.captain.name if t.captain else "None",
-                "budget_total": metrics["budget_total"] if show_budget else None,
-                "budget_used": metrics["budget_used"] if show_budget else None,
-                "reserved_budget": metrics["reserved_budget"] if show_budget else None,
-                "spendable_budget": metrics["spendable_budget"] if show_budget else None,
+                "budget_total": metrics["budget_total"],
+                "budget_used": metrics["budget_used"],
+                "reserved_budget": metrics["reserved_budget"],
+                "spendable_budget": metrics["spendable_budget"],
                 "players_count": metrics["total_assigned_players"],
                 "total_assigned_players": metrics["total_assigned_players"],
                 "is_squad_full": metrics["is_squad_full"]

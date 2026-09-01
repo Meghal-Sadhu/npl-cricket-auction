@@ -293,6 +293,20 @@ class AuctionEngine:
             ).first()
 
             if last_bid:
+                team = db.query(Team).filter(Team.id == last_bid.team_id).first()
+                if team:
+                    metrics = calculate_team_budget_metrics(team, db)
+                    if last_bid.amount > metrics["spendable_budget"]:
+                        if queue_entry:
+                            queue_entry.status = "unsold"
+                        notif = Notification(
+                            message=f"⚠️ SALE CANCELLED! Bid of ₹{last_bid.amount:,.0f} by {team.name} exceeds available spendable budget (₹{metrics['spendable_budget']:,.0f}). Player {player.user.name} marked unsold.",
+                            type="warning"
+                        )
+                        db.add(notif)
+                        db.commit()
+                        return
+
                 # Player Sold!
                 player.is_sold = True
                 if queue_entry:
@@ -307,7 +321,6 @@ class AuctionEngine:
                 db.add(team_player)
 
                 # Deduct budget from team
-                team = db.query(Team).filter(Team.id == last_bid.team_id).first()
                 if team:
                     team.budget_used += last_bid.amount
 

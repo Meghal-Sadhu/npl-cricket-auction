@@ -522,3 +522,53 @@ async def update_settings(
     db.commit()
     await auction_engine.broadcast_state("SETTINGS_UPDATED")
     return get_settings(db)
+
+class CategoryReorderRequest(BaseModel):
+    preferred_category: Optional[str] = "All-Rounder"
+
+@router.post("/reorder-queue-by-category")
+async def reorder_queue_by_category(
+    req: CategoryReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
+    if not session:
+        raise HTTPException(status_code=400, detail="No active auction session.")
+
+    queued_items = db.query(AuctionQueue).filter(
+        AuctionQueue.session_id == session.id,
+        AuctionQueue.status == "queued"
+    ).all()
+
+    if not queued_items:
+        return {"message": "No queued players to re-order."}
+
+    pref = (req.preferred_category or "All-Rounder").lower()
+
+    if "batsman" in pref:
+        prio_map = {"batsman": 1, "all-rounder": 2, "bowler": 3, "wicket keeper": 4, "wicketkeeper": 4}
+    elif "bowler" in pref:
+        prio_map = {"bowler": 1, "all-rounder": 2, "batsman": 3, "wicket keeper": 4, "wicketkeeper": 4}
+    elif "wicket" in pref:
+        prio_map = {"wicket keeper": 1, "wicketkeeper": 1, "all-rounder": 2, "batsman": 3, "bowler": 4}
+    else: # Default: All-Rounders first
+        prio_map = {"all-rounder": 1, "batsman": 2, "bowler": 3, "wicket keeper": 4, "wicketkeeper": 4}
+
+    def sort_key(item):
+        cat = (item.player.category or "").lower() if item.player else ""
+        prio = 99
+        for k, v in prio_map.items():
+            if k in cat:
+                prio = v
+                break
+        return (prio, item.id)
+
+    sorted_items = sorted(queued_items, key=sort_key)
+    for idx, item in enumerate(sorted_items, start=1):
+        item.order_index = idx
+
+    db.add(Notification(message=f"🔀 Auction Queue Re-ordered by Category ({req.preferred_category} first)", type="info"))
+    db.commit()
+    await auction_engine.broadcast_state("QUEUE_REORDERED")
+    return {"message": f"Auction queue successfully reordered with {req.preferred_category} players first."}

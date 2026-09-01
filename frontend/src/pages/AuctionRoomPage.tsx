@@ -252,7 +252,7 @@ export const AuctionRoomPage: React.FC = () => {
   const incrementOptions = getBidIncrementsForPrice(currentPrice);
 
   const formatPrice = (val: number | null | undefined) => {
-    if (val === null || val === undefined || val === 0.0) return 'Hidden';
+    if (val === null || val === undefined || val === 0) return '₹0';
     if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
     if (val >= 100000) return `₹${(val / 100000).toFixed(2)} Lakh`;
     return `₹${val.toLocaleString()}`;
@@ -264,6 +264,15 @@ export const AuctionRoomPage: React.FC = () => {
       fetchNotifications();
     } catch (err: any) {
       setBidErrorLocal(err.response?.data?.detail || 'Admin action failed');
+    }
+  };
+
+  const handleReorderQueueCategory = async (category: string) => {
+    try {
+      await api.post('/auction/reorder-queue-by-category', { preferred_category: category });
+      fetchState();
+    } catch (err: any) {
+      setBidErrorLocal(err.response?.data?.detail || 'Failed to reorder queue');
     }
   };
 
@@ -365,26 +374,26 @@ export const AuctionRoomPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-card p-6 rounded-3xl border border-slate-800">
+      {/* Compact Header Controls Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 glass-card p-4 rounded-2xl border border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black text-white tracking-tight">NPL Auction Console</h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border flex items-center gap-1.5 ${
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">NPL Auction Console</h1>
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider border flex items-center gap-1.5 ${
               isLive 
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
                 : auctionState?.status === 'paused'
                 ? 'bg-gold-500/20 text-gold-400 border-gold-500/30'
                 : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}>
-              <Radio className={`w-3.5 h-3.5 ${isLive ? 'animate-pulse text-emerald-400' : ''}`} />
+              <Radio className={`w-3 h-3 ${isLive ? 'animate-pulse text-emerald-400' : ''}`} />
               {auctionState?.status === 'live' ? 'LIVE AUCTION' : auctionState?.status === 'intermission' ? 'POST-SALE BREAK' : auctionState?.status === 'paused' ? 'AUCTION PAUSED' : 'AUCTION READY'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">Official Nikkiso Corporate Cricket Premier League 2027 Auction Portal</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Official Nikkiso Corporate Cricket Premier League 2027 Auction Portal</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => {
               const nextState = !speechEnabled;
@@ -393,78 +402,83 @@ export const AuctionRoomPage: React.FC = () => {
                 window.speechSynthesis.cancel();
               }
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all cursor-pointer shadow-md ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all cursor-pointer shadow-md ${
               speechEnabled 
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30' 
                 : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
             }`}
             title={speechEnabled ? "Voice Commentary Enabled" : "Voice Commentary Muted"}
           >
-            {speechEnabled ? <Volume2 className="w-4 h-4 text-amber-400 animate-pulse" /> : <VolumeX className="w-4 h-4" />}
+            {speechEnabled ? <Volume2 className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> : <VolumeX className="w-3.5 h-3.5" />}
             Voice Commentary: <span className="font-extrabold">{speechEnabled ? 'ON' : 'OFF'}</span>
           </button>
 
           {user?.role === 'admin' && (
             <button
               onClick={() => setShowSettingsModal(true)}
-              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
             >
-              <Settings className="w-4 h-4 text-brand-400" /> Auction Rules & Settings
+              <Settings className="w-3.5 h-3.5 text-brand-400" /> Auction Rules
             </button>
           )}
         </div>
       </div>
 
-      {/* Captain's Team Purse Bar & Global Player Pool Stats Badge */}
+      {/* Top Cards Row: Captain's Team Purse + Franchise Overview (Sorted Purse-Wise Highest to Lowest) */}
       {(() => {
         const myTeam = auctionState?.teams?.find(t => t.captain_id === user?.id);
-        const queue = auctionState?.queue || [];
-        const totalPool = queue.length;
-        const queuedCount = queue.filter(q => q.status === 'queued' || q.status === 'current').length;
-        const soldCount = queue.filter(q => q.status === 'sold' || q.is_sold).length;
-        const unsoldCount = queue.filter(q => q.status === 'unsold').length;
+        const sortedFranchises = [...(auctionState?.teams || [])].sort((a, b) => (b.spendable_budget ?? 0) - (a.spendable_budget ?? 0));
 
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Captain's Team Purse Card */}
             {myTeam && (
-              <div className="glass-card rounded-2xl p-4 border border-brand-500/30 bg-gradient-to-r from-slate-900/90 via-brand-950/40 to-slate-900/90 flex items-center justify-between shadow-xl">
-                <div className="flex items-center gap-3">
+              <div className="lg:col-span-4 glass-card rounded-2xl p-3.5 border border-brand-500/30 bg-gradient-to-r from-slate-900/95 via-brand-950/40 to-slate-900/95 flex items-center justify-between shadow-xl">
+                <div className="flex items-center gap-3 truncate">
                   {myTeam.logo_path ? (
-                    <img src={myTeam.logo_path} alt={myTeam.name} className="w-10 h-10 rounded-xl object-cover border border-slate-700" />
+                    <img src={getImageUrl(myTeam.logo_path)} alt={myTeam.name} className="w-10 h-10 rounded-xl object-cover border border-slate-700 bg-slate-900 shrink-0" />
                   ) : (
-                    <Shield className="w-10 h-10 text-brand-400 p-2 bg-brand-500/10 rounded-xl border border-brand-500/20" />
+                    <Shield className="w-10 h-10 text-brand-400 p-2 bg-brand-500/10 rounded-xl border border-brand-500/20 shrink-0" />
                   )}
-                  <div>
-                    <span className="text-[10px] text-brand-400 font-extrabold uppercase tracking-wider block">Your Team Purse ({myTeam.name})</span>
-                    <p className="text-lg font-black text-white font-mono tracking-tight">
+                  <div className="truncate">
+                    <span className="text-[10px] text-brand-400 font-extrabold uppercase tracking-wider block truncate">Your Team Purse ({myTeam.name})</span>
+                    <p className="text-base sm:text-lg font-black text-white font-mono tracking-tight">
                       Spendable: <span className="text-emerald-400">{formatPrice(myTeam.spendable_budget)}</span>
                     </p>
                   </div>
                 </div>
 
-                <div className="text-right text-xs font-bold space-y-0.5">
+                <div className="text-right text-xs font-bold space-y-0.5 shrink-0 pl-2">
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Spent: <span className="text-gold-400 font-mono">{formatPrice(myTeam.budget_used)}</span></span>
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Squad: <span className="text-white font-mono">{myTeam.players_count ?? myTeam.total_assigned_players ?? 0}/15</span></span>
                 </div>
               </div>
             )}
 
-            {/* Global Player Pool Counter Card */}
-            <div className={`glass-card rounded-2xl p-4 border border-slate-800 bg-slate-900/80 flex items-center justify-between shadow-xl ${!myTeam ? 'md:col-span-2' : ''}`}>
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Total Player Pool</span>
-                  <p className="text-xl font-black text-white font-mono">{totalPool} Players Registered</p>
-                </div>
+            {/* Franchise Overview Purse Rankings Card (Right Beside Team Purse) */}
+            <div className={`glass-card rounded-2xl p-3.5 border border-slate-800 bg-slate-900/80 shadow-xl ${myTeam ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-gold-400" /> Franchise Purse Rankings (Highest to Lowest)
+                </h4>
+                <span className="text-[10px] text-slate-500 font-bold uppercase">{sortedFranchises.length} Teams Competing</span>
               </div>
 
-              <div className="flex items-center gap-2 text-[10px] font-extrabold">
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Queued: {queuedCount}</span>
-                <span className="px-2.5 py-1 rounded-lg bg-gold-500/10 text-gold-400 border border-gold-500/20">Sold: {soldCount}</span>
-                <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">Unsold: {unsoldCount}</span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {sortedFranchises.map((t, idx) => (
+                  <div key={t.id} className="p-2 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate pr-1">
+                      <span className="text-[9px] font-black text-gold-400 bg-gold-500/10 px-1.5 py-0.5 rounded border border-gold-500/20 shrink-0">#{idx + 1}</span>
+                      {t.logo_path ? (
+                        <img src={getImageUrl(t.logo_path)} alt={t.name} className="w-5 h-5 rounded-md object-cover border border-slate-700 shrink-0" />
+                      ) : null}
+                      <span className="text-white font-extrabold truncate text-[11px]">{t.name}</span>
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-400 font-mono shrink-0">
+                      {formatPrice(t.spendable_budget)}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -899,31 +913,6 @@ export const AuctionRoomPage: React.FC = () => {
                   </div>
                 ))
               )}
-            </div>
-          </div>
-
-          {/* Requirement 9: Franchises Overview Panel */}
-          <div className="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-              <span>Franchises Overview</span>
-              <span className="text-[10px] text-slate-500 font-normal">Live Budget & Roster</span>
-            </h4>
-
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {auctionState?.teams.map((t) => (
-                <div key={t.id} className="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
-                  <div className="truncate pr-2">
-                    <strong className="text-white block truncate font-bold">{t.name}</strong>
-                    <span className="text-[10px] text-slate-400">{t.total_assigned_players ?? t.players_count ?? 0} Players Assigned</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 block font-mono">
-                      {formatPrice(t.spendable_budget)}
-                    </span>
-                    <span className="text-[9px] text-slate-500 font-bold block mt-0.5">Spendable</span>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 

@@ -118,6 +118,8 @@ async def direct_sell_player_to_team(
 
     # Check and replace existing team allocation if any
     existing_tp = db.query(TeamPlayer).filter(TeamPlayer.player_id == target_player_id).first()
+    old_team_id = existing_tp.team_id if existing_tp else None
+
     if existing_tp:
         existing_tp.team_id = team.id
         existing_tp.purchase_price = price_in_rupees
@@ -128,6 +130,18 @@ async def direct_sell_player_to_team(
             purchase_price=price_in_rupees
         )
         db.add(team_player)
+
+    db.flush()
+
+    # Recalculate and sync budget_used column on target team and old team
+    target_used = db.query(func.coalesce(func.sum(TeamPlayer.purchase_price), 0.0)).filter(TeamPlayer.team_id == team.id).scalar()
+    team.budget_used = float(target_used)
+
+    if old_team_id and old_team_id != team.id:
+        old_team = db.query(Team).filter(Team.id == old_team_id).first()
+        if old_team:
+            old_used = db.query(func.coalesce(func.sum(TeamPlayer.purchase_price), 0.0)).filter(TeamPlayer.team_id == old_team.id).scalar()
+            old_team.budget_used = float(old_used)
 
     # Update queue entry
     queue_entry = db.query(AuctionQueue).filter(

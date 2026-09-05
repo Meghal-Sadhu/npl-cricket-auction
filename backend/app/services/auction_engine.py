@@ -10,6 +10,7 @@ from app.models.settings import ApplicationSettings
 from app.models.notification import Notification
 from app.core.websocket_manager import manager
 from app.services.budget_service import calculate_team_budget_metrics
+from sqlalchemy import func
 import logging
 
 logger = logging.getLogger(__name__)
@@ -344,9 +345,11 @@ class AuctionEngine:
                     )
                     db.add(team_player)
 
-                # Deduct budget from team
+                db.flush()
+                # Recalculate and sync budget_used on team
                 if team:
-                    team.budget_used += last_bid.amount
+                    team_used = db.query(func.coalesce(func.sum(TeamPlayer.purchase_price), 0.0)).filter(TeamPlayer.team_id == team.id).scalar()
+                    team.budget_used = float(team_used)
 
                 # Notification
                 notif = Notification(

@@ -109,24 +109,14 @@ export const AuctionRoomPage: React.FC = () => {
     }
   }, [auctionState?.bids, cooldownBuffer]);
 
-  // Cooldown countdown tick (runs every 100ms)
+  // Cooldown countdown tick (runs every 100ms using leak-proof setTimeout)
   useEffect(() => {
-    let interval: any = null;
-    if (cooldownRemaining > 0) {
-      interval = setInterval(() => {
-        setCooldownRemaining(prev => {
-          if (prev <= 0.1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 0.1;
-        });
-      }, 100);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [cooldownRemaining > 0]);
+    if (cooldownRemaining <= 0) return;
+    const timer = setTimeout(() => {
+      setCooldownRemaining(prev => Math.max(0, parseFloat((prev - 0.1).toFixed(1))));
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [cooldownRemaining]);
 
   // Voice Commentary Announcement State (Admin Only)
   const [speechEnabled, setSpeechEnabled] = useState(true);
@@ -156,6 +146,11 @@ export const AuctionRoomPage: React.FC = () => {
         osc.start(startTime);
         osc.stop(startTime + 0.28);
       });
+
+      // Automatically close AudioContext after chime finishes to avoid browser audio node leaks
+      setTimeout(() => {
+        ctx.close().catch(() => {});
+      }, 800);
     } catch (e) {
       console.error(e);
     }
@@ -230,6 +225,9 @@ export const AuctionRoomPage: React.FC = () => {
 
   useEffect(() => {
     fetchSettingsMaxTimer();
+  }, []);
+
+  useEffect(() => {
     if (bidError) {
       setBidErrorLocal(bidError);
       const timer = setTimeout(() => {

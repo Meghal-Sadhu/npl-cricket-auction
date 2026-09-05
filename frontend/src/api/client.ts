@@ -4,16 +4,11 @@ import axios from 'axios';
 // VITE_API_URL      = https://<your-domain>/api  (production)
 // VITE_WS_URL       = wss://<your-domain>/ws/auction  (production)
 // VITE_BACKEND_URL  = https://<your-domain>  (for static file URLs)
-const API_BASE = import.meta.env.VITE_API_URL as string;
-const BACKEND_DOMAIN = import.meta.env.VITE_BACKEND_URL as string;
-const WS_URL = import.meta.env.VITE_WS_URL as string;
+const PROD_DOMAIN = '92-4-76-201.sslip.io';
 
-if (!API_BASE) {
-  console.error(
-    '[Config] VITE_API_URL is not set! Add it in Vercel project settings.\n' +
-    'Example: https://92-4-76-201.sslip.io/api'
-  );
-}
+const API_BASE = (import.meta.env.VITE_API_URL as string) || `https://${PROD_DOMAIN}/api`;
+const BACKEND_DOMAIN = (import.meta.env.VITE_BACKEND_URL as string) || `https://${PROD_DOMAIN}`;
+const WS_URL = (import.meta.env.VITE_WS_URL as string) || `wss://${PROD_DOMAIN}/ws/auction`;
 
 export const api = axios.create({
   baseURL: API_BASE,

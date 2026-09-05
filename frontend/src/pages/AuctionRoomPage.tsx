@@ -225,6 +225,7 @@ export const AuctionRoomPage: React.FC = () => {
 
   useEffect(() => {
     fetchSettingsMaxTimer();
+    fetchState();
   }, []);
 
   useEffect(() => {

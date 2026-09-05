@@ -45,10 +45,10 @@ class AuctionEngine:
                 db.commit()
 
         # 3. Ensure all users with role 'player' or 'admin' have a PlayerProfile record
-        existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all())
+        existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all() if r[0] is not None)
         players_without_profile = db.query(User).filter(
             User.role.in_(["player", "admin"]),
-            ~User.id.in_(existing_profile_user_ids) if existing_profile_user_ids else True
+            ~User.id.in_(list(existing_profile_user_ids)) if existing_profile_user_ids else True
         ).all()
         for p_user in players_without_profile:
             db.add(PlayerProfile(
@@ -65,12 +65,13 @@ class AuctionEngine:
 
         # 4. Find all unsold non-exempt players not yet queued in this session
         existing_queued_player_ids = set(
-            r[0] for r in db.query(AuctionQueue.player_id).filter(AuctionQueue.session_id == session_id).all()
+            r[0] for r in db.query(AuctionQueue.player_id).filter(AuctionQueue.session_id == session_id).all() if r[0] is not None
         )
 
-        query = db.query(PlayerProfile).join(User).filter(PlayerProfile.is_sold == False)
-        if exempt_user_ids:
-            query = query.filter(~User.id.in_(exempt_user_ids))
+        query = db.query(PlayerProfile).outerjoin(User).filter(PlayerProfile.is_sold == False)
+        clean_exempt_ids = [uid for uid in exempt_user_ids if uid is not None]
+        if clean_exempt_ids:
+            query = query.filter((PlayerProfile.user_id == None) | (~PlayerProfile.user_id.in_(clean_exempt_ids)))
 
         all_eligible_players = query.all()
         unqueued_players = [p for p in all_eligible_players if p.id not in existing_queued_player_ids]

@@ -21,7 +21,7 @@ def get_player_pool(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(PlayerProfile).join(User)
+    query = db.query(PlayerProfile).outerjoin(User)
     if category:
         query = query.filter(PlayerProfile.category == category)
     if department:

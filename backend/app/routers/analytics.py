@@ -126,7 +126,7 @@ def export_jersey_specs_csv(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["admin"]))
 ):
-    players = db.query(PlayerProfile).join(User).all()
+    players = db.query(PlayerProfile).outerjoin(User).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -172,7 +172,7 @@ def export_player_pool_csv(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["admin", "captain"]))
 ):
-    players = db.query(PlayerProfile).join(User).all()
+    players = db.query(PlayerProfile).outerjoin(User).all()
 
     output = io.StringIO()
     writer = csv.writer(output)

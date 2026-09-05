@@ -58,10 +58,10 @@ def list_players(
     db: Session = Depends(get_db)
 ):
     # Ensure all users with role 'player' or 'admin' have a PlayerProfile record so they can appear in pool
-    existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all())
+    existing_profile_user_ids = set(r[0] for r in db.query(PlayerProfile.user_id).all() if r[0] is not None)
     users_without_profile = db.query(User).filter(
         User.role.in_(["player", "admin"]),
-        ~User.id.in_(existing_profile_user_ids) if existing_profile_user_ids else True
+        ~User.id.in_(list(existing_profile_user_ids)) if existing_profile_user_ids else True
     ).all()
     for u in users_without_profile:
         db.add(PlayerProfile(
@@ -74,7 +74,7 @@ def list_players(
     if users_without_profile:
         db.commit()
 
-    query = db.query(PlayerProfile).join(User)
+    query = db.query(PlayerProfile).outerjoin(User)
     if category:
         query = query.filter(PlayerProfile.category == category)
     if experience:

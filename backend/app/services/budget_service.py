@@ -28,11 +28,19 @@ def calculate_team_budget_metrics(team: Team, db: Session) -> dict:
     team_players = db.query(TeamPlayer).filter(TeamPlayer.team_id == team.id).all()
     actual_budget_used = sum(tp.purchase_price for tp in team_players)
     
-    # Check if captain is assigned to team
-    captain_assigned = 1 if team.captain_id else 0
-    
-    # Total assigned players count (Captain + Purchased Auction Players)
-    total_assigned = len(team_players) + captain_assigned
+    # Check if team captain's player profile is already present in team_players table
+    captain_user_id = team.captain_id
+    captain_already_in_team_players = False
+    if captain_user_id:
+        captain_profile = db.query(PlayerProfile).filter(PlayerProfile.user_id == captain_user_id).first()
+        if captain_profile:
+            captain_already_in_team_players = any(tp.player_id == captain_profile.id for tp in team_players)
+
+    # Count total unique assigned players (Captain + Purchased Auction Players)
+    if captain_user_id and not captain_already_in_team_players:
+        total_assigned = len(team_players) + 1
+    else:
+        total_assigned = len(team_players)
     
     # Slots remaining to reach minimum target squad size
     remaining_slots = max(0, squad_target - total_assigned)

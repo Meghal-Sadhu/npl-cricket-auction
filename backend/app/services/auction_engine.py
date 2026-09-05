@@ -20,6 +20,7 @@ class AuctionEngine:
         self.timer_task: Optional[asyncio.Task] = None
         self.timer_seconds: int = 30
         self.is_running: bool = False
+        self.is_processing_expiration: bool = False
         self.intermission_seconds: Optional[int] = None
         self.last_sold_info: Optional[Dict[str, Any]] = None
 
@@ -291,6 +292,9 @@ class AuctionEngine:
             await self._handle_timer_expired()
 
     async def _handle_timer_expired(self):
+        if self.is_processing_expiration:
+            return
+        self.is_processing_expiration = True
         self.is_running = False
         db = SessionLocal()
         try:
@@ -432,6 +436,7 @@ class AuctionEngine:
             except Exception:
                 pass
         finally:
+            self.is_processing_expiration = False
             try:
                 db.close()
             except Exception:

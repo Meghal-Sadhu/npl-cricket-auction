@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
 from app.config import settings
 
 # SQLite / Database connection configuration
@@ -9,7 +10,8 @@ if settings.DATABASE_URL.startswith("sqlite"):
     connect_args["timeout"] = 30.0
     engine = create_engine(
         settings.DATABASE_URL,
-        connect_args=connect_args
+        connect_args=connect_args,
+        poolclass=NullPool
     )
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):

@@ -113,20 +113,21 @@ from sqlalchemy import func
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     # Get real client IP (respects X-Forwarded-For from nginx)
     client_ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip()
-
-    # Rate limit check — blocks brute-force attacks
-    _check_rate_limit(client_ip)
-
     clean_email = credentials.email.strip().lower()
+    rate_key = f"{clean_email}_{client_ip}"
+
+    # Rate limit check — blocks brute-force attacks per account/IP
+    _check_rate_limit(rate_key)
+
     user = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if not user:
-        _record_failed_attempt(client_ip)
+        _record_failed_attempt(rate_key)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No registered account found with this email address. Please check your email or register."
         )
     if not verify_password(credentials.password, user.password_hash):
-        _record_failed_attempt(client_ip)
+        _record_failed_attempt(rate_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password. Please check your credentials and try again."
@@ -135,7 +136,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail="Account is deactivated")
 
     # Clear failed attempts on successful login
-    _login_attempts.pop(client_ip, None)
+    _login_attempts.pop(rate_key, None)
 
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
     return Token(access_token=access_token, user=UserOut.model_validate(user))

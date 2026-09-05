@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { api } from '../api/client';
+import { api, formatApiError } from '../api/client';
 import { Mail, Lock, User as UserIcon, Building, ArrowRight, Sparkles, KeyRound, CheckCircle, ShieldCheck } from 'lucide-react';
 import { DEPARTMENTS } from '../types';
 
@@ -21,8 +21,15 @@ export const AuthPages: React.FC = () => {
   const [demoOtpNotice, setDemoOtpNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuthStore();
+  const { user, isAuthenticated, login } = useAuthStore();
   const navigate = useNavigate();
+
+  // Automatically redirect logged-in users away from auth pages
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +54,7 @@ export const AuthPages: React.FC = () => {
       }
       setForgotStep('otp');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to send OTP code.');
+      setError(formatApiError(err, 'Failed to send OTP code.'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +76,7 @@ export const AuthPages: React.FC = () => {
       setDemoOtpNotice(null);
       setForgotStep('new_password');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid OTP code.');
+      setError(formatApiError(err, 'Invalid OTP code.'));
     } finally {
       setLoading(false);
     }
@@ -94,7 +101,7 @@ export const AuthPages: React.FC = () => {
       setOtpCode('');
       setNewPassword('');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to reset password.');
+      setError(formatApiError(err, 'Failed to reset password.'));
     } finally {
       setLoading(false);
     }
@@ -130,7 +137,7 @@ export const AuthPages: React.FC = () => {
         navigate('/register-profile');
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Authentication operation failed.');
+      setError(formatApiError(err, 'Authentication failed. Please check your credentials and network.'));
     } finally {
       setLoading(false);
     }

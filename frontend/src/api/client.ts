@@ -17,10 +17,39 @@ if (!API_BASE) {
 
 export const api = axios.create({
   baseURL: API_BASE,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Safely format API error detail strings/arrays/objects into renderable strings
+export const formatApiError = (err: any, fallbackMsg: string = 'Operation failed'): string => {
+  if (!err) return fallbackMsg;
+  if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+    return 'Server request timed out. Please check your internet connection and try again.';
+  }
+  const detail = err.response?.data?.detail;
+  if (!detail) {
+    return err.message || fallbackMsg;
+  }
+  if (typeof detail === 'string') {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && item.msg) return item.msg;
+        return JSON.stringify(item);
+      })
+      .join('; ');
+  }
+  if (typeof detail === 'object') {
+    return JSON.stringify(detail);
+  }
+  return fallbackMsg;
+};
 
 // Inject JWT bearer token on every request
 api.interceptors.request.use((config) => {

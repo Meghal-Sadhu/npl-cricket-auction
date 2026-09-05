@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.database import get_db
 from app.models.user import User
 from app.models.player import PlayerProfile
+from app.models.team import TeamPlayer
 from app.models.wishlist import Wishlist
 from app.schemas.player import PlayerProfileOut
 from app.core.security import get_current_user, require_roles
@@ -21,7 +22,10 @@ def get_player_pool(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(PlayerProfile).outerjoin(User)
+    query = db.query(PlayerProfile).options(
+        joinedload(PlayerProfile.user),
+        joinedload(PlayerProfile.team_player).joinedload(TeamPlayer.team)
+    ).outerjoin(User)
     if category:
         query = query.filter(PlayerProfile.category == category)
     if department:

@@ -1,6 +1,6 @@
 import asyncio
 from typing import Optional, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import SessionLocal
 from app.models.user import User
 from app.models.auction import AuctionSession, AuctionQueue, Bid
@@ -127,7 +127,7 @@ class AuctionEngine:
         highest_bidder_team = None
 
         if session.current_player_id:
-            player = db.query(PlayerProfile).filter(PlayerProfile.id == session.current_player_id).first()
+            player = db.query(PlayerProfile).options(joinedload(PlayerProfile.user)).filter(PlayerProfile.id == session.current_player_id).first()
             if player:
                 current_player = {
                     "id": player.id,
@@ -145,7 +145,7 @@ class AuctionEngine:
                 }
                 
                 # Fetch highest bid for current player
-                last_bid = db.query(Bid).filter(
+                last_bid = db.query(Bid).options(joinedload(Bid.team)).filter(
                     Bid.session_id == session.id,
                     Bid.player_id == player.id
                 ).order_by(Bid.amount.desc()).first()
@@ -161,7 +161,9 @@ class AuctionEngine:
         # Fetch recent bids with Captain Name and Increment Amount
         recent_bids = []
         if session.current_player_id and current_player:
-            bids_list = db.query(Bid).filter(
+            bids_list = db.query(Bid).options(
+                joinedload(Bid.team).joinedload(Team.captain)
+            ).filter(
                 Bid.session_id == session.id,
                 Bid.player_id == session.current_player_id
             ).order_by(Bid.created_at.asc()).all()
@@ -185,9 +187,11 @@ class AuctionEngine:
 
             recent_bids = list(reversed(temp_bids))[:15]
 
-        # Fetch Queue
+        # Fetch Queue with joinedload for player and user to eliminate N+1 query loop
         queue_items = []
-        queue = db.query(AuctionQueue).filter(
+        queue = db.query(AuctionQueue).options(
+            joinedload(AuctionQueue.player).joinedload(PlayerProfile.user)
+        ).filter(
             AuctionQueue.session_id == session.id
         ).order_by(AuctionQueue.order_index.asc()).all()
 
@@ -214,7 +218,7 @@ class AuctionEngine:
 
         # Fetch Teams with Budget metrics visible for Franchise Overview
         teams_list = []
-        teams = db.query(Team).all()
+        teams = db.query(Team).options(joinedload(Team.captain)).all()
         for t in teams:
             metrics = calculate_team_budget_metrics(t, db)
             

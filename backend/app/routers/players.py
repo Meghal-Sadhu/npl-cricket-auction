@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 import os
 import uuid
@@ -74,7 +74,10 @@ def list_players(
     if users_without_profile:
         db.commit()
 
-    query = db.query(PlayerProfile).outerjoin(User)
+    query = db.query(PlayerProfile).options(
+        joinedload(PlayerProfile.user),
+        joinedload(PlayerProfile.team_player).joinedload(TeamPlayer.team)
+    ).outerjoin(User)
     if category:
         query = query.filter(PlayerProfile.category == category)
     if experience:

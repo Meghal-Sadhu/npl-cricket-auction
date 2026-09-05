@@ -321,6 +321,7 @@ export const AuctionRoomPage: React.FC = () => {
         team_id: parseInt(directSellTeamId),
         price_in_lakhs: lakhs
       });
+      setDirectSellTeamId('');
       fetchNotifications();
       fetchState();
     } catch (err: any) {

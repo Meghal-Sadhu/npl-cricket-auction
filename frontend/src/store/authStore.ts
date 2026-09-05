@@ -36,16 +36,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
     try {
-      const res = await api.get<User>('/auth/me', { timeout: 6000 });
+      const res = await api.get<User>('/auth/me', { timeout: 8000 });
       if (res.data && res.data.id) {
         set({ user: res.data, isAuthenticated: true, isLoading: false });
-      } else {
-        throw new Error('Invalid user profile response');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch user session:', err);
-      localStorage.removeItem('access_token');
-      set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+      // ONLY clear session if the server explicitly returned 401 Unauthorized
+      if (err.response && err.response.status === 401) {
+        localStorage.removeItem('access_token');
+        set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+      }
     } finally {
       set({ isLoading: false });
     }

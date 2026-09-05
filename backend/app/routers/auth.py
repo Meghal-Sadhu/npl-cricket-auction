@@ -16,9 +16,9 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 # Tracks failed attempts per IP. Resets after WINDOW_SECONDS.
 # ─────────────────────────────────────────────────────────────────────────────
 _login_attempts: dict = defaultdict(list)
-MAX_ATTEMPTS = 10       # Max failed attempts per IP
+MAX_ATTEMPTS = 50       # Max failed attempts per IP
 WINDOW_SECONDS = 60     # Rolling window in seconds
-LOCKOUT_SECONDS = 300   # 5-minute lockout after exceeding limit
+LOCKOUT_SECONDS = 30    # Short lockout to avoid blocking corporate proxy users
 
 def _check_rate_limit(ip: str) -> None:
     now = time()

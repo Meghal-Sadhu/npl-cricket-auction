@@ -398,6 +398,7 @@ class AuctionEngine:
             # Set status to "intermission" during break so no bids can be placed
             session.status = "intermission"
             db.commit()
+            db.close()
 
             for remaining in range(break_len, 0, -1):
                 self.intermission_seconds = remaining
@@ -413,16 +414,28 @@ class AuctionEngine:
                 })
                 await asyncio.sleep(1)
 
-            # Auto-resume auction to next player!
-            session.status = "live"
-            db.commit()
-            await self.advance_to_next_player(db)
+            # Auto-resume auction to next player using short-lived DB session
+            db_resume = SessionLocal()
+            try:
+                session_resume = db_resume.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
+                if session_resume:
+                    session_resume.status = "live"
+                    db_resume.commit()
+                    await self.advance_to_next_player(db_resume)
+            finally:
+                db_resume.close()
 
         except Exception as e:
             logger.error(f"Error handling timer expired: {e}")
-            db.rollback()
+            try:
+                db.rollback()
+            except Exception:
+                pass
         finally:
-            db.close()
+            try:
+                db.close()
+            except Exception:
+                pass
 
     async def advance_to_next_player(self, db: Session):
         session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()

@@ -119,14 +119,15 @@ async def direct_sell_player_to_team(
     # Check and replace existing team allocation if any
     existing_tp = db.query(TeamPlayer).filter(TeamPlayer.player_id == target_player_id).first()
     if existing_tp:
-        db.delete(existing_tp)
-
-    team_player = TeamPlayer(
-        team_id=team.id,
-        player_id=player.id,
-        purchase_price=price_in_rupees
-    )
-    db.add(team_player)
+        existing_tp.team_id = team.id
+        existing_tp.purchase_price = price_in_rupees
+    else:
+        team_player = TeamPlayer(
+            team_id=team.id,
+            player_id=player.id,
+            purchase_price=price_in_rupees
+        )
+        db.add(team_player)
 
     # Update queue entry
     queue_entry = db.query(AuctionQueue).filter(

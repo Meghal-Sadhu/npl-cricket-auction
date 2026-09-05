@@ -331,13 +331,18 @@ class AuctionEngine:
                 if queue_entry:
                     queue_entry.status = "sold"
 
-                # Assign to team
-                team_player = TeamPlayer(
-                    team_id=last_bid.team_id,
-                    player_id=player.id,
-                    purchase_price=last_bid.amount
-                )
-                db.add(team_player)
+                # Assign or update team assignment
+                existing_tp = db.query(TeamPlayer).filter(TeamPlayer.player_id == player.id).first()
+                if existing_tp:
+                    existing_tp.team_id = last_bid.team_id
+                    existing_tp.purchase_price = last_bid.amount
+                else:
+                    team_player = TeamPlayer(
+                        team_id=last_bid.team_id,
+                        player_id=player.id,
+                        purchase_price=last_bid.amount
+                    )
+                    db.add(team_player)
 
                 # Deduct budget from team
                 if team:

@@ -126,7 +126,11 @@ export const AuctionRoomPage: React.FC = () => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
+      
       const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
 
       // Energetic 4-note celebration chime (C5 -> E5 -> G5 -> C6)
       const notes = [523.25, 659.25, 783.99, 1046.50];
@@ -147,9 +151,11 @@ export const AuctionRoomPage: React.FC = () => {
         osc.stop(startTime + 0.28);
       });
 
-      // Automatically close AudioContext after chime finishes to avoid browser audio node leaks
+      // Safely close context after notes complete
       setTimeout(() => {
-        ctx.close().catch(() => {});
+        if (ctx.state !== 'closed') {
+          ctx.close().catch(() => {});
+        }
       }, 800);
     } catch (e) {
       console.error(e);
@@ -732,12 +738,12 @@ export const AuctionRoomPage: React.FC = () => {
                     <div className="relative">
                       <input
                         type="number"
-                        step="0.5"
+                        step="any"
                         min="5"
                         required
                         value={directSellPriceLakhs}
                         onChange={(e) => setDirectSellPriceLakhs(e.target.value)}
-                        placeholder="e.g. 25"
+                        placeholder="e.g. 7.25"
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-12 py-1.5 text-xs text-white font-mono"
                       />
                       <span className="text-[10px] font-bold text-gold-400 absolute right-3 top-2">Lakh</span>

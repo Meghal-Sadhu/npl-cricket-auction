@@ -221,10 +221,14 @@ export const PlayerPoolPage: React.FC = () => {
     e.preventDefault();
     if (!allocatePlayer || !selectedTeamId) return;
 
+    const parsedPrice = parseFloat(purchasePrice) || 5.0;
+    // Support entering either in Lakhs (e.g. 7.25) or full Rupees (e.g. 725000)
+    const finalPriceInRupees = parsedPrice < 10000 ? parsedPrice * 100000.0 : parsedPrice;
+
     try {
       await api.post(`/teams/allocate/${allocatePlayer.id}`, {
         team_id: parseInt(selectedTeamId),
-        purchase_price: parseFloat(purchasePrice) || 500000.0
+        purchase_price: finalPriceInRupees
       });
 
       setAllocatePlayer(null);

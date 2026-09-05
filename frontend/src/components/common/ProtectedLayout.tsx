@@ -11,6 +11,11 @@ export const ProtectedLayout: React.FC = () => {
 
   useEffect(() => {
     fetchCurrentUser();
+    // Safety fallback: Ensure loading screen never hangs for more than 4 seconds
+    const fallbackTimer = setTimeout(() => {
+      useAuthStore.setState({ isLoading: false });
+    }, 4000);
+    return () => clearTimeout(fallbackTimer);
   }, []);
 
   useEffect(() => {
@@ -21,11 +26,20 @@ export const ProtectedLayout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-semibold text-slate-400">Loading NPL Auction Platform...</p>
         </div>
+        <button
+          onClick={() => {
+            useAuthStore.getState().logout();
+            window.location.href = '/login';
+          }}
+          className="mt-2 text-xs text-brand-400 hover:text-brand-300 hover:underline font-bold cursor-pointer transition-colors"
+        >
+          Taking too long? Click here to Log In
+        </button>
       </div>
     );
   }

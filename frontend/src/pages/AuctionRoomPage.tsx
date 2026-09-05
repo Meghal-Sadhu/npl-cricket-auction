@@ -11,6 +11,28 @@ import {
   DollarSign, Shield, Users, AlertCircle, Clock, Volume2, VolumeX, Sparkles, Gavel, Settings, Search 
 } from 'lucide-react';
 
+const TeamLogo: React.FC<{ logoPath?: string; teamName: string; sizeClass?: string }> = ({ logoPath, teamName, sizeClass = "w-7 h-7" }) => {
+  const [hasError, setHasError] = useState(false);
+  const imageUrl = logoPath ? getImageUrl(logoPath) : '';
+
+  if (!logoPath || hasError || !imageUrl) {
+    return (
+      <div className={`${sizeClass} rounded-lg bg-brand-600/20 border border-brand-500/30 flex items-center justify-center font-bold text-brand-400 text-[10px] flex-shrink-0`}>
+        {teamName ? teamName.charAt(0).toUpperCase() : 'T'}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={teamName}
+      onError={() => setHasError(true)}
+      className={`${sizeClass} rounded-lg object-cover border border-slate-700 flex-shrink-0`}
+    />
+  );
+};
+
 export const AuctionRoomPage: React.FC = () => {
   const { user } = useAuthStore();
   const { auctionState, isConnected, bidError, placeBid, clearBidError, fetchNotifications, fetchState } = useAuctionStore();
@@ -752,7 +774,7 @@ export const AuctionRoomPage: React.FC = () => {
 
               {auctionState?.highest_bidder_team ? (
                 <div className="flex items-center gap-3 bg-brand-500/10 px-4 py-2 rounded-2xl border border-brand-500/30">
-                  <Shield className="w-6 h-6 text-brand-400" />
+                  <TeamLogo logoPath={auctionState.highest_bidder_team.logo_path} teamName={auctionState.highest_bidder_team.name} sizeClass="w-7 h-7" />
                   <div className="text-right">
                     <span className="text-[9px] text-brand-400 font-bold uppercase block">Highest Bidder</span>
                     <strong className="text-white text-sm font-extrabold">{auctionState.highest_bidder_team.name}</strong>
@@ -883,13 +905,7 @@ export const AuctionRoomPage: React.FC = () => {
                 auctionState.bids.map((b: any) => (
                   <div key={b.id} className="p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2.5">
-                      {b.team_logo ? (
-                        <img src={b.team_logo} alt={b.team_name} className="w-7 h-7 rounded-lg object-cover border border-slate-700" />
-                      ) : (
-                        <div className="w-7 h-7 rounded-lg bg-brand-600/20 border border-brand-500/30 flex items-center justify-center font-bold text-brand-400 text-[10px]">
-                          {b.team_name.charAt(0)}
-                        </div>
-                      )}
+                      <TeamLogo logoPath={b.team_logo} teamName={b.team_name} sizeClass="w-7 h-7" />
                       <div>
                         <div className="flex items-center gap-1.5">
                           <strong className="text-white font-bold">{b.team_name}</strong>

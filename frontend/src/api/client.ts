@@ -31,14 +31,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 Unauthorized globally (e.g. expired admin session)
+// Handle 401 Unauthorized globally (e.g. expired session)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      if (localStorage.getItem('access_token')) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }

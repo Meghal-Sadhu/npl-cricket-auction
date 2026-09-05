@@ -56,8 +56,12 @@ async def auction_websocket(websocket: WebSocket, token: str = None):
                         })
                         continue
 
-                    # Fetch Captain's team
-                    captain_team = db.query(Team).filter(Team.captain_id == current_user.id).first()
+                    # Fetch Captain's team by captain_id or email match
+                    captain_team = db.query(Team).filter(
+                        (Team.captain_id == current_user.id) |
+                        (Team.captain.has(User.email == current_user.email))
+                    ).first()
+
                     if not captain_team and current_user.role == "admin":
                         # If admin is bidding directly, check if team_id passed in msg
                         team_id = msg.get("team_id")
@@ -67,7 +71,7 @@ async def auction_websocket(websocket: WebSocket, token: str = None):
                     if not captain_team:
                         await websocket.send_json({
                             "event": "BID_ERROR",
-                            "message": "You are not assigned as captain to any team."
+                            "message": f"Account '{current_user.name}' is not assigned as captain to any franchise team."
                         })
                         continue
 
@@ -106,30 +110,38 @@ async def auction_websocket(websocket: WebSocket, token: str = None):
                         })
                         continue
 
-                    # Place Bid!
-                    new_bid = Bid(
-                        session_id=session.id,
-                        player_id=session.current_player_id,
-                        team_id=captain_team.id,
-                        amount=bid_amount
-                    )
-                    db.add(new_bid)
-                    db.commit()
+                    # Place Bid safely with exception handling & rollback
+                    try:
+                        new_bid = Bid(
+                            session_id=session.id,
+                            player_id=session.current_player_id,
+                            team_id=captain_team.id,
+                            amount=bid_amount
+                        )
+                        db.add(new_bid)
+                        db.commit()
 
-                    # Timer reset if configured
-                    timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()
-                    timer_len = int(timer_setting.value) if timer_setting else 30
-                    reset_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_reset_on_bid").first()
-                    should_reset = reset_setting.value.lower() == "true" if reset_setting else True
+                        # Timer reset if configured
+                        timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()
+                        timer_len = int(timer_setting.value) if timer_setting else 30
+                        reset_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_reset_on_bid").first()
+                        should_reset = reset_setting.value.lower() == "true" if reset_setting else True
 
-                    if should_reset:
-                        await auction_engine.start_timer(timer_len)
+                        if should_reset:
+                            await auction_engine.start_timer(timer_len)
 
-                    # Broadcast new bid update
-                    await auction_engine.broadcast_state(event_type="NEW_BID", extra={
-                        "bidder_team": captain_team.name,
-                        "amount": bid_amount
-                    })
+                        # Broadcast new bid update
+                        await auction_engine.broadcast_state(event_type="NEW_BID", extra={
+                            "bidder_team": captain_team.name,
+                            "amount": bid_amount
+                        })
+                    except Exception as bid_err:
+                        db.rollback()
+                        logger.error(f"Error saving bid: {bid_err}")
+                        await websocket.send_json({
+                            "event": "BID_ERROR",
+                            "message": f"Database error placing bid: {str(bid_err)}"
+                        })
 
                 elif action == "PING":
                     await websocket.send_json({"event": "PONG"})

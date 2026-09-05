@@ -30,16 +30,24 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   fetchCurrentUser: async () => {
     const token = localStorage.getItem('access_token');
-    if (!token) {
-      set({ isLoading: false, isAuthenticated: false, user: null });
+    if (!token || token === 'null' || token === 'undefined') {
+      localStorage.removeItem('access_token');
+      set({ isLoading: false, isAuthenticated: false, user: null, token: null });
       return;
     }
     try {
-      const res = await api.get<User>('/auth/me');
-      set({ user: res.data, isAuthenticated: true, isLoading: false });
+      const res = await api.get<User>('/auth/me', { timeout: 6000 });
+      if (res.data && res.data.id) {
+        set({ user: res.data, isAuthenticated: true, isLoading: false });
+      } else {
+        throw new Error('Invalid user profile response');
+      }
     } catch (err) {
+      console.error('Failed to fetch user session:', err);
       localStorage.removeItem('access_token');
       set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));

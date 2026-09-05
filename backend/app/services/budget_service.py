@@ -37,12 +37,17 @@ def calculate_team_budget_metrics(team: Team, db: Session) -> dict:
     # Slots remaining to reach minimum target squad size
     remaining_slots = max(0, squad_target - total_assigned)
     
-    # Reserved budget = remaining_slots * base_price
-    # e.g., if target is 11, and captain is present (total_assigned = 1), 10 slots remain -> 10 * 5 Lakh = ₹50 Lakh reserved
+    # Reserved budget for display (all remaining slots * base_price)
     reserved_budget = float(remaining_slots * base_price)
     
-    # Maximum spendable budget for placing bids
-    max_bid_limit = float(team.budget_total - actual_budget_used - reserved_budget)
+    # For active player bidding, reserve base price ONLY for SUBSEQUENT remaining slots (excluding the active player)
+    # e.g., if target is 11 and total_assigned is 1 (captain), 10 slots remain. The current active player fills 1 slot,
+    # so we only reserve base price for the remaining 9 future slots (9 * 5 Lakh = ₹45 Lakh).
+    future_reserved_slots = max(0, remaining_slots - 1)
+    future_reserved_budget = float(future_reserved_slots * base_price)
+    
+    # Maximum spendable budget for placing bids on the active player
+    max_bid_limit = float(team.budget_total - actual_budget_used - future_reserved_budget)
     spendable_budget = max(0.0, max_bid_limit)
     
     return {

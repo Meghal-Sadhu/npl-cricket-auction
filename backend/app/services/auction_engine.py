@@ -100,7 +100,7 @@ class AuctionEngine:
                 ).update({"status": "queued"}, synchronize_session=False)
             db.commit()
 
-    def get_full_state(self, db: Session, user_role: str = "admin", user_team_id: Optional[int] = None) -> Dict[str, Any]:
+    def get_full_state(self, db: Session, user_role: str = "admin", user_team_id: Optional[int] = None, sync_queue: bool = False) -> Dict[str, Any]:
         session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
         if not session:
             session = AuctionSession(status="not_started", timer_seconds=30)
@@ -108,8 +108,10 @@ class AuctionEngine:
             db.commit()
             db.refresh(session)
 
-        # Auto-sync queue to ensure all non-captain players are queued
-        self.sync_auction_queue(db, session.id)
+        # Sync queue only on explicit demand or if queue is completely uninitialized
+        queue_count = db.query(AuctionQueue).filter(AuctionQueue.session_id == session.id).count()
+        if sync_queue or queue_count == 0:
+            self.sync_auction_queue(db, session.id)
 
         # Dynamic Default Timer setting lookup
         timer_setting = db.query(ApplicationSettings).filter(ApplicationSettings.key == "timer_seconds").first()
@@ -278,7 +280,11 @@ class AuctionEngine:
         while self.timer_seconds > 0 and self.is_running:
             await asyncio.sleep(1)
             self.timer_seconds -= 1
-            await self.broadcast_state(event_type="TIMER_TICK", extra={"timer_seconds": self.timer_seconds})
+            await manager.broadcast({
+                "event": "TIMER_TICK",
+                "timer_seconds": self.timer_seconds,
+                "extra": {"timer_seconds": self.timer_seconds}
+            })
 
         if self.timer_seconds == 0 and self.is_running:
             await self._handle_timer_expired()
@@ -387,10 +393,15 @@ class AuctionEngine:
 
             for remaining in range(break_len, 0, -1):
                 self.intermission_seconds = remaining
-                await self.broadcast_state(event_type="INTERMISSION_TICK", extra={
+                await manager.broadcast({
+                    "event": "INTERMISSION_TICK",
                     "timer_seconds": remaining,
                     "intermission_seconds": remaining,
-                    "last_sold_info": self.last_sold_info
+                    "extra": {
+                        "timer_seconds": remaining,
+                        "intermission_seconds": remaining,
+                        "last_sold_info": self.last_sold_info
+                    }
                 })
                 await asyncio.sleep(1)
 

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.models.user import User
 from app.models.player import PlayerProfile
+from app.models.team import Team, TeamPlayer
 from app.models.settings import ApplicationSettings
 from app.schemas.player import PlayerProfileCreate, PlayerProfileUpdate, PlayerProfileOut, AdminPlayerCreate
 from app.core.security import get_current_user, require_roles

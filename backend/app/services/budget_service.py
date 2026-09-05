@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.team import Team, TeamPlayer
+from app.models.player import PlayerProfile
 from app.models.settings import ApplicationSettings
 
 DEFAULT_BASE_PRICE = 500000.0 # ₹5 Lakh

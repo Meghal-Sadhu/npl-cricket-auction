@@ -183,8 +183,8 @@ async def award_current_player(
     current_user: User = Depends(require_roles(["admin"]))
 ):
     session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
-    if not session or session.status != "live" or not session.current_player_id:
-        raise HTTPException(status_code=400, detail="Cannot award player when auction is not live or no active player on hammer.")
+    if not session or session.status not in ["live", "paused"] or not session.current_player_id:
+        raise HTTPException(status_code=400, detail="Cannot award player when no active player is on hammer.")
 
     auction_engine.stop_timer()
     await auction_engine._handle_timer_expired()
@@ -275,8 +275,8 @@ async def next_player(
     current_user: User = Depends(require_roles(["admin"]))
 ):
     session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
-    if not session or session.status != "live":
-        raise HTTPException(status_code=400, detail="Cannot advance to next player when auction is not live. Please Start or Resume the auction first.")
+    if not session or session.status not in ["live", "paused"]:
+        raise HTTPException(status_code=400, detail="Cannot advance to next player. Please start or resume the auction session first.")
 
     await auction_engine.advance_to_next_player(db)
     return {"message": "Advanced to next player"}
@@ -287,8 +287,8 @@ async def skip_player(
     current_user: User = Depends(require_roles(["admin"]))
 ):
     session = db.query(AuctionSession).order_by(AuctionSession.id.desc()).first()
-    if not session or session.status != "live":
-        raise HTTPException(status_code=400, detail="Cannot skip player when auction is not live. Please Start or Resume the auction first.")
+    if not session or session.status not in ["live", "paused"]:
+        raise HTTPException(status_code=400, detail="Cannot skip player. Please start or resume the auction session first.")
 
     if session.current_player_id:
         queue_entry = db.query(AuctionQueue).filter(

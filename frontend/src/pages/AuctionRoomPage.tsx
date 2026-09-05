@@ -248,6 +248,7 @@ export const AuctionRoomPage: React.FC = () => {
   };
 
   const isLive = auctionState?.status === 'live';
+  const isAuctionActive = auctionState?.status === 'live' || auctionState?.status === 'paused';
   const currentPlayer = auctionState?.current_player;
   const currentPrice = auctionState?.highest_bid || (currentPlayer?.base_price || 500000);
 
@@ -670,7 +671,7 @@ export const AuctionRoomPage: React.FC = () => {
 
 
                 <button
-                  disabled={!isLive || !currentPlayer}
+                  disabled={!isAuctionActive || !currentPlayer}
                   onClick={() => handleAdminAction('award-player')}
                   className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/25 cursor-pointer"
                 >
@@ -678,7 +679,7 @@ export const AuctionRoomPage: React.FC = () => {
                 </button>
 
                 <button
-                  disabled={!isLive}
+                  disabled={!isAuctionActive}
                   onClick={() => handleAdminAction('next-player')}
                   className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-2 border border-slate-700 cursor-pointer"
                 >
@@ -686,7 +687,7 @@ export const AuctionRoomPage: React.FC = () => {
                 </button>
 
                 <button
-                  disabled={!isLive}
+                  disabled={!isAuctionActive}
                   onClick={() => handleAdminAction('skip-player')}
                   className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 font-bold text-xs flex items-center gap-2 border border-slate-700 cursor-pointer"
                 >
@@ -694,7 +695,7 @@ export const AuctionRoomPage: React.FC = () => {
                 </button>
 
                 <button
-                  disabled={!isLive}
+                  disabled={!isAuctionActive}
                   onClick={() => handleAdminAction('shuffle-queue')}
                   title="Shuffle Queue randomly reorders all upcoming queued players."
                   className="px-4 py-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 disabled:opacity-40 disabled:cursor-not-allowed text-indigo-300 font-bold text-xs flex items-center gap-2 border border-indigo-500/30 cursor-pointer"
